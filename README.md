@@ -49,14 +49,37 @@ promedio, descomposición local vs. FX, dividendos, TIR).
 - **PriceSnapshot**: precios de mercado de cada activo, para valuar las
   posiciones abiertas.
 
-## Cómo correrla
+## Desplegarla en internet (Vercel + Neon, gratis)
 
-Requiere Node.js 20+.
+La forma recomendada de usarla sin instalar nada es publicarla con un link
+fijo:
+
+1. **Base de datos** — creá una cuenta gratis en [neon.tech](https://neon.tech),
+   creá un proyecto y copiá el "Connection string" (Postgres).
+2. **Hosting** — creá una cuenta gratis en [vercel.com](https://vercel.com)
+   (podés entrar con tu cuenta de GitHub), hacé **Add New → Project** e
+   importá el repositorio `JuanMaRobledo/Cartera`.
+3. En el paso de configuración del proyecto, abrí **Environment Variables**
+   y agregá `DATABASE_URL` con el connection string de Neon del paso 1.
+4. Hacé clic en **Deploy**. Vercel instala las dependencias, crea las
+   tablas en la base (`prisma db push`, corre solo como parte del build) y
+   compila la app. Al terminar te da una URL fija
+   (`https://cartera-tu-usuario.vercel.app`) — esa es tu app.
+5. Cada vez que se sube un cambio a la rama `main` del repositorio, Vercel
+   vuelve a desplegar automáticamente.
+
+Los datos quedan en Neon (en la nube), así que persisten entre despliegues y
+accedés desde cualquier dispositivo con esa URL.
+
+## Correrla en tu computadora
+
+Requiere Node.js 20+ y una base Postgres (podés usar la misma de Neon, o
+correr una local).
 
 ```bash
 npm install
-cp .env.example .env    # define DATABASE_URL (SQLite local)
-npx prisma db push      # crea prisma/dev.db según el schema
+cp .env.example .env    # pegá tu DATABASE_URL de Postgres
+npx prisma db push      # crea las tablas según el schema
 npm run db:seed         # (opcional) carga datos de ejemplo
 npm run dev             # http://localhost:3000
 ```
