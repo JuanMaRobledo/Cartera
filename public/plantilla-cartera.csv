@@ -1,0 +1,8 @@
+type,date,ticker,quantity,price,currency,amount,commission,notes
+BUY,2024-01-15,AAPL,10,190.5,USD,,1,Compra inicial
+SELL,2024-06-01,AAPL,5,200,USD,,1,Toma de ganancias
+DIVIDEND,2024-08-15,AAPL,,,USD,15,,Dividendo trimestral
+DEPOSIT,2024-01-01,,,,USD,5000,,Depósito inicial
+WITHDRAWAL,2024-09-01,,,,USD,500,,Retiro
+INTEREST,2024-07-01,,,,USD,3.2,,Interés sobre saldo
+FEE,2024-03-01,,,,USD,10,,Comisión de mantenimiento

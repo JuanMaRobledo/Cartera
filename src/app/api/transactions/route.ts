@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { TRANSACTION_TYPES } from "@/lib/enums";
-import { getFxRateNear } from "@/lib/data";
+import { resolveAndCreateTransaction, TransactionValidationError } from "@/lib/transactions";
 
 export async function GET() {
   const transactions = await prisma.transaction.findMany({
@@ -35,50 +34,31 @@ export async function POST(request: Request) {
   if (!accountId || !type || !date || !currencyCode) {
     return NextResponse.json({ error: "accountId, type, date y currencyCode son requeridos" }, { status: 400 });
   }
-  if (!TRANSACTION_TYPES.includes(type)) {
-    return NextResponse.json({ error: `type inválido: ${type}` }, { status: 400 });
-  }
-  if ((type === "BUY" || type === "SELL") && !assetId) {
-    return NextResponse.json({ error: `${type} requiere assetId` }, { status: 400 });
-  }
-  if ((type === "BUY" || type === "SELL") && (quantity == null || price == null)) {
-    return NextResponse.json({ error: `${type} requiere quantity y price` }, { status: 400 });
-  }
-  if (type === "FX_CONVERT" && (!fxFromCurrency || fxFromAmount == null || !fxToCurrency || fxToAmount == null)) {
-    return NextResponse.json(
-      { error: "FX_CONVERT requiere fxFromCurrency, fxFromAmount, fxToCurrency y fxToAmount" },
-      { status: 400 },
-    );
-  }
 
-  const txDate = new Date(date);
-  const resolvedFxRate = fxRateToBase ?? (await getFxRateNear(currencyCode, txDate));
-  if (resolvedFxRate == null) {
-    return NextResponse.json(
-      { error: `No hay tipo de cambio para ${currencyCode} cerca de ${date}. Cargá uno en /fx-rates o enviá fxRateToBase.` },
-      { status: 400 },
-    );
-  }
-
-  const transaction = await prisma.transaction.create({
-    data: {
+  try {
+    const transaction = await resolveAndCreateTransaction({
       accountId,
-      assetId: assetId || null,
+      assetId,
       type,
-      date: txDate,
-      quantity: quantity ?? null,
-      price: price ?? null,
+      date: new Date(date),
+      quantity,
+      price,
       currencyCode,
-      fxRateToBase: resolvedFxRate,
-      amount: amount ?? null,
-      commission: commission ?? 0,
-      commissionCurrency: commissionCurrency || null,
-      fxFromCurrency: fxFromCurrency || null,
-      fxFromAmount: fxFromAmount ?? null,
-      fxToCurrency: fxToCurrency || null,
-      fxToAmount: fxToAmount ?? null,
-      notes: notes || null,
-    },
-  });
-  return NextResponse.json(transaction, { status: 201 });
+      fxRateToBase,
+      amount,
+      commission,
+      commissionCurrency,
+      fxFromCurrency,
+      fxFromAmount,
+      fxToCurrency,
+      fxToAmount,
+      notes,
+    });
+    return NextResponse.json(transaction, { status: 201 });
+  } catch (err) {
+    if (err instanceof TransactionValidationError) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
+    throw err;
+  }
 }

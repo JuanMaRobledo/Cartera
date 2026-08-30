@@ -25,6 +25,10 @@ movimiento del tipo de cambio.
 - **Dividendos e intereses**, netos de comisión/retención.
 - **Efectivo multi-moneda**: ledger simple de depósitos, retiros, compras,
   ventas, dividendos, intereses, comisiones y cambios de moneda.
+- **Importación de archivos de broker** (`/importar`): subís el "Activity
+  Statement" de Interactive Brokers exportado como CSV, o un CSV con la
+  plantilla propia de Cartera para otros brokers, y la app arma una vista
+  previa de las transacciones antes de cargarlas.
 
 El motor de cálculo está en `src/lib/portfolio.ts` y tiene tests unitarios en
 `src/lib/portfolio.test.ts` que documentan y verifican la lógica (costo
@@ -84,6 +88,29 @@ npm test        # tests del motor de cálculo (vitest)
 8. **Panel**: ahí ves el valor total, el retorno total y su descomposición
    entre desempeño del activo y efecto cambiario, por posición y a nivel de
    toda la cartera.
+
+## Importar desde un broker
+
+En `/importar` podés subir un CSV en lugar de cargar transacciones a mano:
+
+- **Interactive Brokers**: descargá el "Activity Statement" (Reportes →
+  Statements → Activity) como CSV. La app lee las secciones de Operaciones
+  (Trades), Dividendos, Retención de impuestos, Depósitos y retiros,
+  Intereses y Comisiones, usando los encabezados que trae el propio archivo
+  (así funciona aunque hayas configurado columnas distintas).
+- **Otros brokers**: usá la [plantilla CSV de Cartera](public/plantilla-cartera.csv)
+  (columnas `type,date,ticker,quantity,price,currency,amount,commission,notes`)
+  y completala con tus movimientos.
+
+El formato se detecta automáticamente (o lo podés forzar). Antes de importar
+nada se muestra una vista previa fila por fila: activos y monedas nuevos
+quedan marcados, y las filas que no se pueden resolver (por ejemplo, una
+moneda sin tipo de cambio cargado todavía) aparecen deshabilitadas con el
+motivo, para que las completes en Tipos de cambio o Activos y subas el
+archivo de nuevo. Solo se importan las filas que dejás tildadas.
+
+La lógica de parseo vive en `src/lib/imports/` (`ibkr.ts`, `generic.ts`) con
+tests unitarios en `*.test.ts`.
 
 ## Datos y persistencia
 
