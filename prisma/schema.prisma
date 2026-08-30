@@ -1,0 +1,125 @@
+// Cartera — modelo de datos para seguimiento de cartera multi-moneda.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Fila única con la configuración global de la app.
+model Setting {
+  id            Int    @id @default(1)
+  baseCurrency  String @default("USD")
+}
+
+model Currency {
+  code   String @id // ISO 4217, ej. "USD", "EUR", "ARS"
+  name   String
+  symbol String
+
+  assets       Asset[]
+  fxRates      FxRate[]
+  transactions Transaction[] @relation("TransactionCurrency")
+}
+
+// kind: BROKERAGE | BANK | EXCHANGE | OTHER (ver src/lib/enums.ts)
+model Account {
+  id        String   @id @default(cuid())
+  name      String
+  broker    String?
+  kind      String   @default("BROKERAGE")
+  createdAt DateTime @default(now())
+
+  transactions Transaction[]
+}
+
+// assetType: STOCK | ETF | BOND | CRYPTO | FUND | CASH | OTHER (ver src/lib/enums.ts)
+model Asset {
+  id           String   @id @default(cuid())
+  ticker       String
+  name         String
+  assetType    String   @default("STOCK")
+  currencyCode String
+  exchange     String?
+  currency     Currency @relation(fields: [currencyCode], references: [code])
+
+  transactions Transaction[]
+  prices       PriceSnapshot[]
+
+  @@unique([ticker, exchange])
+}
+
+model PriceSnapshot {
+  id      String   @id @default(cuid())
+  assetId String
+  date    DateTime
+  price   Float
+  source  String   @default("MANUAL") // MANUAL | API
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, date])
+}
+
+// Tipo de cambio: 1 unidad de currencyCode = rate unidades de la moneda base de la app.
+model FxRate {
+  id           String   @id @default(cuid())
+  date         DateTime
+  currencyCode String
+  rate         Float
+  source       String   @default("MANUAL")
+
+  currency Currency @relation(fields: [currencyCode], references: [code])
+
+  @@unique([currencyCode, date])
+}
+
+// type: BUY | SELL | DIVIDEND | INTEREST | FEE | DEPOSIT | WITHDRAWAL | FX_CONVERT
+// (ver src/lib/enums.ts)
+model Transaction {
+  id        String   @id @default(cuid())
+  accountId String
+  assetId   String?
+  type      String
+  date      DateTime
+
+  // Cantidad de título (BUY/SELL). Nulo para movimientos puramente de efectivo.
+  quantity Float?
+  // Precio por unidad en la moneda de la transacción (BUY/SELL/DIVIDEND por acción).
+  price    Float?
+
+  // Moneda en la que están expresados quantity*price / amount de esta transacción.
+  currencyCode String
+  // Tipo de cambio vigente ese día: 1 currencyCode = fxRateToBase moneda base.
+  fxRateToBase Float
+
+  // Monto de efectivo para movimientos sin cantidad/precio (DIVIDEND total, INTEREST,
+  // FEE, DEPOSIT, WITHDRAWAL). Para BUY/SELL se puede dejar nulo y se calcula qty*price.
+  amount Float?
+
+  // Comisión de la operación, en commissionCurrency (por defecto currencyCode).
+  commission         Float?  @default(0)
+  commissionCurrency String?
+
+  // Campos exclusivos de FX_CONVERT: conversión de fromAmount en fromCurrency
+  // a toAmount en toCurrency, al tipo de cambio efectivo de ese día (incluye
+  // el spread/costo del cambio, que puede diferir del FxRate de mercado).
+  fxFromCurrency String?
+  fxFromAmount   Float?
+  fxToCurrency   String?
+  fxToAmount     Float?
+
+  notes String?
+
+  account  Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  asset    Asset?   @relation(fields: [assetId], references: [id])
+  currency Currency @relation("TransactionCurrency", fields: [currencyCode], references: [code])
+
+  createdAt DateTime @default(now())
+
+  @@index([assetId])
+  @@index([accountId])
+  @@index([date])
+}
