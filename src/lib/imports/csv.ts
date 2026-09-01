@@ -6,7 +6,10 @@ export function parseCsv(text: string): string[][] {
   let row: string[] = [];
   let field = "";
   let inQuotes = false;
-  const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  // Excel/Windows suele anteponer un BOM (U+FEFF) a los CSV exportados, lo
+  // que corre el "^" de la primera línea y rompe la detección de formato.
+  const withoutBom = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+  const normalized = withoutBom.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 
   for (let i = 0; i < normalized.length; i++) {
     const c = normalized[i];

@@ -25,10 +25,14 @@ movimiento del tipo de cambio.
 - **Dividendos e intereses**, netos de comisión/retención.
 - **Efectivo multi-moneda**: ledger simple de depósitos, retiros, compras,
   ventas, dividendos, intereses, comisiones y cambios de moneda.
-- **Importación de archivos de broker** (`/importar`): subís el "Activity
-  Statement" de Interactive Brokers exportado como CSV, o un CSV con la
-  plantilla propia de Cartera para otros brokers, y la app arma una vista
-  previa de las transacciones antes de cargarlas.
+- **Importación de archivos de broker** (`/importar`): subís el "Transaction
+  History" o el "Activity Statement" de Interactive Brokers exportados como
+  CSV, o un CSV con la plantilla propia de Cartera para otros brokers, y la
+  app arma una vista previa de las transacciones antes de cargarlas.
+- **Buscador de acciones/ETFs** (en Activos): lista de referencia con los
+  tickers más comunes de EE.UU. y de la Bolsa de Colombia (BVC) para
+  autocompletar nombre, mercado y moneda al dar de alta un activo — no es
+  exhaustiva, así que lo que no aparezca se carga a mano como siempre.
 
 El motor de cálculo está en `src/lib/portfolio.ts` y tiene tests unitarios en
 `src/lib/portfolio.test.ts` que documentan y verifican la lógica (costo
@@ -116,11 +120,17 @@ npm test        # tests del motor de cálculo (vitest)
 
 En `/importar` podés subir un CSV en lugar de cargar transacciones a mano:
 
-- **Interactive Brokers**: descargá el "Activity Statement" (Reportes →
-  Statements → Activity) como CSV. La app lee las secciones de Operaciones
-  (Trades), Dividendos, Retención de impuestos, Depósitos y retiros,
-  Intereses y Comisiones, usando los encabezados que trae el propio archivo
-  (así funciona aunque hayas configurado columnas distintas).
+- **Interactive Brokers (recomendado)**: descargá el reporte **"Transaction
+  History"** (Reportes → Historial de transacciones), eligiendo el rango de
+  fechas que quieras importar. Es el formato más confiable: usa una única
+  tabla y la columna "Transaction Type" queda en inglés (Dividend, Buy,
+  Sell, Foreign Tax Withholding…) sin importar el idioma configurado en tu
+  cuenta.
+- **Interactive Brokers (alternativa)**: el "Activity Statement" (Reportes →
+  Statements → Activity) también funciona si tu cuenta está en inglés y el
+  statement incluye las secciones Trades, Dividends, Withholding Tax,
+  Deposits & Withdrawals, Interest y Fees (si armaste un statement solo con
+  resúmenes de NAV/posiciones, no va a tener nada para importar).
 - **Otros brokers**: usá la [plantilla CSV de Cartera](public/plantilla-cartera.csv)
   (columnas `type,date,ticker,quantity,price,currency,amount,commission,notes`)
   y completala con tus movimientos.
@@ -128,11 +138,14 @@ En `/importar` podés subir un CSV en lugar de cargar transacciones a mano:
 El formato se detecta automáticamente (o lo podés forzar). Antes de importar
 nada se muestra una vista previa fila por fila: activos y monedas nuevos
 quedan marcados, y las filas que no se pueden resolver (por ejemplo, una
-moneda sin tipo de cambio cargado todavía) aparecen deshabilitadas con el
-motivo, para que las completes en Tipos de cambio o Activos y subas el
-archivo de nuevo. Solo se importan las filas que dejás tildadas.
+moneda sin tipo de cambio cargado todavía, o un tipo de transacción que
+todavía no reconocemos) aparecen deshabilitadas con el motivo, para que las
+completes en Tipos de cambio o Activos y subas el archivo de nuevo. Solo se
+importan las filas que dejás tildadas.
 
-La lógica de parseo vive en `src/lib/imports/` (`ibkr.ts`, `generic.ts`) con
+La lógica de parseo vive en `src/lib/imports/` (`ibkr.ts` para el Activity
+Statement, `ibkrTransactionHistory.ts` para el Transaction History,
+`generic.ts` para la plantilla propia) con
 tests unitarios en `*.test.ts`.
 
 ## Datos y persistencia

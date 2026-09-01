@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ASSET_TYPES } from "@/lib/enums";
+import { searchReferenceStocks, type ReferenceStock } from "@/lib/reference/stocks";
 
 interface Currency {
   code: string;
@@ -16,10 +17,19 @@ interface Asset {
   exchange: string | null;
 }
 
+// Nombre/símbolo por defecto al crear automáticamente una moneda que todavía
+// no existe (porque el usuario eligió una acción de la lista de referencia).
+const CURRENCY_DEFAULTS: Record<string, { name: string; symbol: string }> = {
+  USD: { name: "Dólar estadounidense", symbol: "US$" },
+  COP: { name: "Peso colombiano", symbol: "COL$" },
+};
+
 export default function AssetsPage() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [form, setForm] = useState({ ticker: "", name: "", assetType: "STOCK", currencyCode: "", exchange: "" });
+  const [search, setSearch] = useState("");
+  const [suggestions, setSuggestions] = useState<ReferenceStock[]>([]);
   const [priceForm, setPriceForm] = useState<Record<string, { date: string; price: string }>>({});
   const [error, setError] = useState<string | null>(null);
   const [priceMsg, setPriceMsg] = useState<string | null>(null);
@@ -32,6 +42,33 @@ export default function AssetsPage() {
   useEffect(() => {
     load();
   }, []);
+
+  const ensureCurrency = async (code: string) => {
+    if (currencies.some((c) => c.code === code)) return;
+    const defaults = CURRENCY_DEFAULTS[code] ?? { name: code, symbol: code };
+    const res = await fetch("/api/currencies", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, ...defaults }),
+    });
+    if (res.ok) {
+      const created = await res.json();
+      setCurrencies((prev) => [...prev, created]);
+    }
+  };
+
+  const pickSuggestion = async (stock: ReferenceStock) => {
+    await ensureCurrency(stock.currencyCode);
+    setForm({
+      ticker: stock.ticker,
+      name: stock.name,
+      assetType: "STOCK",
+      currencyCode: stock.currencyCode,
+      exchange: stock.exchange,
+    });
+    setSearch(`${stock.ticker} — ${stock.name}`);
+    setSuggestions([]);
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,6 +83,7 @@ export default function AssetsPage() {
       return;
     }
     setForm({ ticker: "", name: "", assetType: "STOCK", currencyCode: "", exchange: "" });
+    setSearch("");
     load();
   };
 
@@ -76,6 +114,41 @@ export default function AssetsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Activos</h1>
+
+      <div className="card relative">
+        <label className="label">Buscar acción o ETF de EE.UU. o Colombia (opcional)</label>
+        <input
+          className="input"
+          placeholder="Ej: Apple, AAPL, Ecopetrol…"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setSuggestions(searchReferenceStocks(e.target.value));
+          }}
+        />
+        <p className="mt-1 text-xs text-slate-500">
+          Lista de referencia con los principales tickers — si el tuyo no aparece, completá el formulario de abajo a
+          mano.
+        </p>
+        {suggestions.length > 0 && (
+          <ul className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+            {suggestions.map((s) => (
+              <li key={`${s.ticker}-${s.exchange}`}>
+                <button
+                  type="button"
+                  className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-100"
+                  onClick={() => pickSuggestion(s)}
+                >
+                  <span className="font-medium">{s.ticker}</span> — {s.name}
+                  <span className="ml-1 text-xs text-slate-500">
+                    ({s.exchange}, {s.currencyCode})
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       <form onSubmit={submit} className="card grid grid-cols-1 gap-3 sm:grid-cols-5">
         <div>
