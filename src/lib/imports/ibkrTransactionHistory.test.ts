@@ -23,6 +23,7 @@ const SAMPLE = [
   "Transaction History,Data,2026-08-28,Cuenta X,ALGUN TIPO RARO,Corporate Action Adjustment,-,-,-,-,1,-,1",
   "Transaction History,Data,2026-07-01,Cuenta X,NKE(US6541061031) Pago en Lugar de Dividendo (in Lieu) (Dividendo ordinario),Payment in Lieu,NKE,-,-,-,0.41,-,0.41",
   "Transaction History,Data,2026-07-02,Cuenta X,NKE(US6541061031) Pago en Lugar de Dividendo (in Lieu) - Reversión,Payment in Lieu,NKE,-,-,-,-0.41,-,-0.41",
+  "Transaction History,Data,2026-08-05,Cuenta X,USD Interés deudor para Jul-2026,Debit Interest,-,-,-,-,-12.56,-,-12.56",
 ].join("\n");
 
 describe("isIbkrTransactionHistory", () => {
@@ -79,6 +80,11 @@ describe("parseIbkrTransactionHistory", () => {
   it("avisa y omite un tipo de transacción no reconocido en vez de adivinar", () => {
     expect(rows.some((r) => r.notes === "ALGUN TIPO RARO")).toBe(false);
     expect(warnings.some((w) => w.includes("Corporate Action Adjustment"))).toBe(true);
+  });
+
+  it('mapea Debit Interest (sin símbolo, Symbol="-") como gasto sin ticker, no con ticker "-"', () => {
+    const debitInterest = rows.find((r) => r.notes.includes("Interés deudor"));
+    expect(debitInterest).toMatchObject({ type: "FEE", amount: 12.56, ticker: null });
   });
 
   it("mapea Payment in Lieu como dividendo y preserva el signo de una reversión", () => {

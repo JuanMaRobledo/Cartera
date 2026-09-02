@@ -125,7 +125,8 @@ export function parseIbkrTransactionHistory(text: string): { rows: ProposedRow[]
     const grossAmount = toNumber(get(fieldMap, "Gross Amount"));
     const commission = Math.abs(toNumber(get(fieldMap, "Commission")) ?? 0);
     const date = (get(fieldMap, "Date") ?? "").trim().split(/[,;]/)[0].trim();
-    const ticker = (get(fieldMap, "Symbol") ?? "").trim().toUpperCase();
+    const symbolRaw = (get(fieldMap, "Symbol") ?? "").trim().toUpperCase();
+    const ticker = symbolRaw === "-" ? "" : symbolRaw;
     const description = get(fieldMap, "Description") ?? "";
     const amount = netAmount ?? grossAmount;
 
