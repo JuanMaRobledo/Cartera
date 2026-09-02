@@ -131,6 +131,15 @@ En `/importar` podés subir un CSV en lugar de cargar transacciones a mano:
   statement incluye las secciones Trades, Dividends, Withholding Tax,
   Deposits & Withdrawals, Interest y Fees (si armaste un statement solo con
   resúmenes de NAV/posiciones, no va a tener nada para importar).
+- **Portafolios con columnas de efectivo/operaciones** (Symbol, Trade Date,
+  Purchase Price, Quantity, Commission, Transaction Type, con `$$CASH_TX`
+  para depósitos/retiros/comisiones): se detecta automáticamente. No trae
+  columna de moneda, así que se asume USD para todas las filas.
+- **Historial de órdenes de un bróker colombiano** (columnas en español:
+  Fecha y hora, Símbolo de la acción, Tipo de orden, Estado, Acciones
+  completadas…): solo se importan las órdenes con Estado "Aprobado"; en una
+  ejecución parcial se toma la cantidad efectivamente ejecutada. Se asume
+  COP para todas las filas (no trae columna de moneda).
 - **Otros brokers**: usá la [plantilla CSV de Cartera](public/plantilla-cartera.csv)
   (columnas `type,date,ticker,quantity,price,currency,amount,commission,notes`)
   y completala con tus movimientos.
@@ -143,10 +152,11 @@ todavía no reconocemos) aparecen deshabilitadas con el motivo, para que las
 completes en Tipos de cambio o Activos y subas el archivo de nuevo. Solo se
 importan las filas que dejás tildadas.
 
-La lógica de parseo vive en `src/lib/imports/` (`ibkr.ts` para el Activity
-Statement, `ibkrTransactionHistory.ts` para el Transaction History,
-`generic.ts` para la plantilla propia) con
-tests unitarios en `*.test.ts`.
+La lógica de parseo vive en `src/lib/imports/`: `ibkr.ts` (Activity
+Statement), `ibkrTransactionHistory.ts` (Transaction History),
+`yahooPortfolio.ts` (portafolio con `$$CASH_TX`), `coBrokerOrders.ts`
+(historial de órdenes en español) y `generic.ts` (plantilla propia), cada
+uno con sus tests en `*.test.ts`.
 
 ## Datos y persistencia
 

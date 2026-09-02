@@ -21,6 +21,8 @@ const SAMPLE = [
   "Transaction History,Data,2026-08-26,Cuenta X,ELECTRONIC FUND TRANSFER,Electronic Fund Transfer,-,-,-,-,500,-,500",
   "Transaction History,Data,2026-08-27,Cuenta X,BROKER INTEREST RECEIVED,Broker Interest Received,-,-,-,-,0.42,-,0.42",
   "Transaction History,Data,2026-08-28,Cuenta X,ALGUN TIPO RARO,Corporate Action Adjustment,-,-,-,-,1,-,1",
+  "Transaction History,Data,2026-07-01,Cuenta X,NKE(US6541061031) Pago en Lugar de Dividendo (in Lieu) (Dividendo ordinario),Payment in Lieu,NKE,-,-,-,0.41,-,0.41",
+  "Transaction History,Data,2026-07-02,Cuenta X,NKE(US6541061031) Pago en Lugar de Dividendo (in Lieu) - Reversión,Payment in Lieu,NKE,-,-,-,-0.41,-,-0.41",
 ].join("\n");
 
 describe("isIbkrTransactionHistory", () => {
@@ -77,5 +79,14 @@ describe("parseIbkrTransactionHistory", () => {
   it("avisa y omite un tipo de transacción no reconocido en vez de adivinar", () => {
     expect(rows.some((r) => r.notes === "ALGUN TIPO RARO")).toBe(false);
     expect(warnings.some((w) => w.includes("Corporate Action Adjustment"))).toBe(true);
+  });
+
+  it("mapea Payment in Lieu como dividendo y preserva el signo de una reversión", () => {
+    const paymentInLieu = rows.filter((r) => r.notes.includes("Pago en Lugar"));
+    expect(paymentInLieu).toHaveLength(2);
+    expect(paymentInLieu[0]).toMatchObject({ type: "DIVIDEND", ticker: "NKE", amount: 0.41 });
+    expect(paymentInLieu[1]).toMatchObject({ type: "DIVIDEND", ticker: "NKE", amount: -0.41 });
+    const netDividend = paymentInLieu.reduce((sum, r) => sum + (r.amount ?? 0), 0);
+    expect(netDividend).toBeCloseTo(0, 6);
   });
 });

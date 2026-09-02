@@ -6,6 +6,7 @@
 // fijas, porque IBKR permite configurar qué columnas incluye cada sección
 // (Flex Queries).
 import { parseCsv } from "./csv";
+import { normalizeDate } from "./dates";
 import type { ProposedRow } from "./types";
 
 const RECOGNIZED_SECTIONS = [
@@ -31,15 +32,6 @@ function toNumber(v: string | undefined): number | null {
   if (v == null || v.trim() === "") return null;
   const n = Number(v.replace(/,/g, ""));
   return Number.isFinite(n) ? n : null;
-}
-
-function normalizeDate(raw: string | undefined): string {
-  if (!raw) return "";
-  const datePart = raw.trim().split(/[,;]/)[0].trim();
-  if (/^\d{8}$/.test(datePart)) {
-    return `${datePart.slice(0, 4)}-${datePart.slice(4, 6)}-${datePart.slice(6, 8)}`;
-  }
-  return datePart;
 }
 
 function extractTickerFromDescription(desc: string | undefined): string | null {

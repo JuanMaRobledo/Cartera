@@ -3,6 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { resolveAndCreateTransaction, TransactionValidationError } from "@/lib/transactions";
 import type { ProposedRow } from "@/lib/imports/types";
 
+// Tickers tipo "BTC-USD" (formato usado por varios trackers de portafolio
+// para cripto) no traen ningún otro indicio de que sean cripto y no acción.
+const CRYPTO_TICKER = /^[A-Z0-9]+-(USD|USDT|USDC|EUR|BTC|ETH)$/;
+
 export async function POST(request: Request) {
   const body = await request.json();
   const { accountId, rows } = body as { accountId?: string; rows?: ProposedRow[] };
@@ -31,7 +35,12 @@ export async function POST(request: Request) {
           assetId = existing.id;
         } else {
           const createdAsset = await prisma.asset.create({
-            data: { ticker: row.ticker, name: row.ticker, assetType: "STOCK", currencyCode: row.currencyCode },
+            data: {
+              ticker: row.ticker,
+              name: row.ticker,
+              assetType: CRYPTO_TICKER.test(row.ticker) ? "CRYPTO" : "STOCK",
+              currencyCode: row.currencyCode,
+            },
           });
           assetId = createdAsset.id;
         }

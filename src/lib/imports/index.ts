@@ -1,9 +1,11 @@
 import { isIbkrActivityStatement, parseIbkrStatement } from "./ibkr";
 import { isIbkrTransactionHistory, parseIbkrTransactionHistory } from "./ibkrTransactionHistory";
+import { isYahooPortfolio, parseYahooPortfolio } from "./yahooPortfolio";
+import { isCoBrokerOrders, parseCoBrokerOrders } from "./coBrokerOrders";
 import { isGenericTemplate, parseGenericTemplate } from "./generic";
 import type { ProposedRow } from "./types";
 
-export type ImportFormat = "ibkr" | "generic";
+export type ImportFormat = "ibkr" | "yahoo" | "co-broker" | "generic";
 export type ImportFormatOption = ImportFormat | "auto";
 
 function stripBom(text: string): string {
@@ -33,6 +35,12 @@ export function detectAndParse(
         ],
       };
     }
+  }
+  if (chosen === "yahoo" || (chosen === "auto" && isYahooPortfolio(text))) {
+    return { format: "yahoo", ...parseYahooPortfolio(text) };
+  }
+  if (chosen === "co-broker" || (chosen === "auto" && isCoBrokerOrders(text))) {
+    return { format: "co-broker", ...parseCoBrokerOrders(text) };
   }
   if (chosen === "generic" || isGenericTemplate(text)) {
     return { format: "generic", ...parseGenericTemplate(text) };

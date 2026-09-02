@@ -52,6 +52,7 @@ const EXACT_TYPE_MAP: Record<string, TypeMapping> = {
   buy: { type: "BUY", isTrade: true },
   sell: { type: "SELL", isTrade: true },
   dividend: { type: "DIVIDEND" },
+  "payment in lieu": { type: "DIVIDEND" },
   "payment in lieu of dividend": { type: "DIVIDEND" },
   "foreign tax withholding": { type: "FEE" },
   "withholding tax": { type: "FEE" },
@@ -70,11 +71,11 @@ const EXACT_TYPE_MAP: Record<string, TypeMapping> = {
 };
 
 // Las filas que no son operaciones no traen columna de moneda propia; IBKR
-// suele mencionarla en la descripción justo después del ISIN entre
-// paréntesis (ej. "NVO(US6701002056) Dividendo en efectivo USD 0.58...").
-// Si no la encontramos ahí, asumimos la divisa base de la cuenta.
+// suele mencionar la moneda del monto por acción en la descripción, siempre
+// como "XXX <número>" (ej. "USD 0.579193 por acción", "USD Interés deudor").
+// Si no encontramos ese patrón, asumimos la divisa base de la cuenta.
 function currencyFromDescription(description: string, fallback: string): string {
-  const match = description.match(/\)[^A-Z]*\b([A-Z]{3})\b/);
+  const match = description.match(/\b([A-Z]{3})\s+\d/);
   return match ? match[1] : fallback;
 }
 
@@ -82,7 +83,7 @@ function classifyType(raw: string, netAmount: number): TypeMapping | null {
   const normalized = raw.trim().toLowerCase();
   if (EXACT_TYPE_MAP[normalized]) return EXACT_TYPE_MAP[normalized];
 
-  if (normalized.includes("dividend")) return { type: "DIVIDEND" };
+  if (normalized.includes("dividend") || normalized.includes("in lieu")) return { type: "DIVIDEND" };
   if (normalized.includes("interest")) {
     return { type: netAmount >= 0 ? "INTEREST" : "FEE" };
   }
@@ -172,6 +173,11 @@ export function parseIbkrTransactionHistory(text: string): { rows: ProposedRow[]
       : mapping.type;
 
     const isAssetLinked = finalType === "DIVIDEND" || finalType === "FEE";
+    // Los dividendos pueden traer reversiones/correcciones en negativo (ej.
+    // "Payment in Lieu" pagado de más y corregido al día siguiente); ahí
+    // preservamos el signo para que se resten. El resto de los tipos usa la
+    // convención de nuestro motor (monto siempre positivo, con el signo ya
+    // reflejado en el tipo de transacción elegido más arriba).
     rows.push({
       key,
       type: finalType,
@@ -180,7 +186,7 @@ export function parseIbkrTransactionHistory(text: string): { rows: ProposedRow[]
       currencyCode: currencyFromDescription(description, baseCurrency),
       quantity: null,
       price: null,
-      amount: Math.abs(amount),
+      amount: finalType === "DIVIDEND" ? amount : Math.abs(amount),
       commission: 0,
       notes: description || `Importado de IBKR (${rawType})`,
       sourceSection: "IBKR: Historial de transacciones",

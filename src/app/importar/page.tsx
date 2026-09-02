@@ -29,7 +29,14 @@ interface EnrichedRow {
   reason: string | null;
 }
 
-type Format = "auto" | "ibkr" | "generic";
+type Format = "auto" | "ibkr" | "yahoo" | "co-broker" | "generic";
+
+const FORMAT_LABELS: Record<string, string> = {
+  ibkr: "Interactive Brokers",
+  yahoo: "Portafolio (efectivo + operaciones)",
+  "co-broker": "Bróker colombiano (historial de órdenes)",
+  generic: "plantilla genérica",
+};
 
 export default function ImportPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -117,11 +124,12 @@ export default function ImportPage() {
       <div>
         <h1 className="text-2xl font-semibold">Importar transacciones</h1>
         <p className="text-sm text-slate-500">
-          Subí el &ldquo;Activity Statement&rdquo; de Interactive Brokers (exportado como CSV) o un CSV con la{" "}
+          Subí un CSV de Interactive Brokers (Transaction History o Activity Statement), de un portafolio con
+          columnas de efectivo/operaciones, del historial de órdenes de un bróker colombiano, o un CSV con la{" "}
           <a href="/plantilla-cartera.csv" className="underline" download>
             plantilla de Cartera
           </a>{" "}
-          para otros brokers.
+          para cualquier otro origen.
         </p>
       </div>
 
@@ -145,7 +153,9 @@ export default function ImportPage() {
             <label className="label">Formato del archivo</label>
             <select className="input" value={format} onChange={(e) => setFormat(e.target.value as Format)}>
               <option value="auto">Detectar automáticamente</option>
-              <option value="ibkr">Interactive Brokers (Activity Statement CSV)</option>
+              <option value="ibkr">Interactive Brokers (Transaction History o Activity Statement)</option>
+              <option value="yahoo">Portafolio con efectivo (columnas Trade Date/Purchase Price…)</option>
+              <option value="co-broker">Bróker colombiano (historial de órdenes)</option>
               <option value="generic">Genérico (plantilla Cartera)</option>
             </select>
           </div>
@@ -191,8 +201,8 @@ export default function ImportPage() {
         <div className="card overflow-x-auto">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-medium">
-              Vista previa ({detectedFormat === "ibkr" ? "Interactive Brokers" : "plantilla genérica"}) —{" "}
-              {selectedCount} de {rows.length} seleccionadas
+              Vista previa ({FORMAT_LABELS[detectedFormat ?? "generic"] ?? detectedFormat}) — {selectedCount} de{" "}
+              {rows.length} seleccionadas
             </h2>
             <button className="btn" onClick={commit} disabled={committing || selectedCount === 0 || !accountId}>
               {committing ? "Importando…" : `Importar ${selectedCount} transacciones`}
