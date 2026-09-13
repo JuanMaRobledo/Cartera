@@ -96,7 +96,12 @@ export function parseYahooPortfolio(text: string): { rows: ProposedRow[]; warnin
       return;
     }
 
-    if (rawType !== "BUY" && rawType !== "SELL") {
+    // SHORT/COVER son la forma en que algunos trackers etiquetan ventas en
+    // corto y su recompra; el motor de cálculo ya interpreta cualquier
+    // BUY/SELL que cruce cero como abrir/cerrar una posición corta, así que
+    // se mapean directamente a los mismos tipos.
+    const type = rawType === "SHORT" ? "SELL" : rawType === "COVER" ? "BUY" : rawType;
+    if (type !== "BUY" && type !== "SELL") {
       warnings.push(`Fila ${rowNum}: tipo de transacción "${rawType}" no reconocido para ${symbol}, se omite.`);
       return;
     }
@@ -107,7 +112,7 @@ export function parseYahooPortfolio(text: string): { rows: ProposedRow[]; warnin
     }
     rows.push({
       key: `yahoo-${rowNum}`,
-      type: rawType,
+      type,
       date,
       ticker: symbol,
       currencyCode: ASSUMED_CURRENCY,

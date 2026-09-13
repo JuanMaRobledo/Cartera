@@ -40,6 +40,7 @@ export async function POST(request: Request) {
               name: row.ticker,
               assetType: CRYPTO_TICKER.test(row.ticker) ? "CRYPTO" : "STOCK",
               currencyCode: row.currencyCode,
+              exchange: row.exchange || null,
             },
           });
           assetId = createdAsset.id;
