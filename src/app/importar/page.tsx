@@ -27,6 +27,7 @@ interface EnrichedRow {
   fxRateToBase: number | null;
   ready: boolean;
   reason: string | null;
+  duplicate: boolean;
 }
 
 type Format = "auto" | "ibkr" | "yahoo" | "co-broker" | "generic";
@@ -57,6 +58,10 @@ export default function ImportPage() {
   }, []);
 
   const handleFile = async (file: File) => {
+    if (!accountId) {
+      setError("Elegí primero la cuenta destino: la necesitamos para detectar transacciones que ya hayas cargado.");
+      return;
+    }
     setError(null);
     setResult(null);
     setFileName(file.name);
@@ -66,7 +71,7 @@ export default function ImportPage() {
       const res = await fetch("/api/imports/parse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ csv: text, format }),
+        body: JSON.stringify({ csv: text, format, accountId }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -77,7 +82,7 @@ export default function ImportPage() {
       setRows(data.rows);
       setWarnings(data.warnings ?? []);
       const initialSelection: Record<string, boolean> = {};
-      for (const row of data.rows as EnrichedRow[]) initialSelection[row.key] = row.ready;
+      for (const row of data.rows as EnrichedRow[]) initialSelection[row.key] = row.ready && !row.duplicate;
       setSelected(initialSelection);
     } catch {
       setError("No se pudo leer el archivo.");
@@ -165,8 +170,10 @@ export default function ImportPage() {
               type="file"
               accept=".csv,text/csv"
               className="input"
+              disabled={!accountId}
               onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
             />
+            {!accountId && <p className="mt-1 text-xs text-slate-500">Elegí la cuenta destino primero.</p>}
           </div>
         </div>
         {parsing && <p className="text-sm text-slate-500">Analizando {fileName}…</p>}
@@ -255,7 +262,13 @@ export default function ImportPage() {
                   <td>{row.commission ? formatMoney(row.commission) : "—"}</td>
                   <td className="text-xs text-slate-500">{row.sourceSection}</td>
                   <td className="text-xs">
-                    {row.ready ? <span className="gain-text">Lista</span> : <span className="loss-text">{row.reason}</span>}
+                    {!row.ready ? (
+                      <span className="loss-text">{row.reason}</span>
+                    ) : row.duplicate ? (
+                      <span className="text-amber-700">Posible duplicado</span>
+                    ) : (
+                      <span className="gain-text">Lista</span>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -268,6 +281,13 @@ export default function ImportPage() {
                 Tipos de cambio
               </a>{" "}
               (o que resuelvas el conflicto de ticker/moneda en Activos), y luego subas el archivo de nuevo.
+            </p>
+          )}
+          {rows.some((r) => r.duplicate) && (
+            <p className="mt-1 text-xs text-slate-500">
+              Las filas en &ldquo;Posible duplicado&rdquo; ya parecen existir en esta cuenta (mismo tipo, fecha, activo y
+              cantidad/monto) — vienen destildadas por las dudas, pero podés tildarlas si sabés que son operaciones
+              distintas que coincidieron.
             </p>
           )}
         </div>
