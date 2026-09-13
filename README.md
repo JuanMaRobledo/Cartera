@@ -22,17 +22,44 @@ movimiento del tipo de cambio.
   clave: para cada venta y para cada posición abierta se separa
   - cuánto es **desempeño del activo** en su propia moneda, y
   - cuánto es **efecto del tipo de cambio** sobre el capital invertido.
+  Esto funciona tanto para posiciones largas como para **ventas en corto**
+  (cantidad negativa): el motor detecta automáticamente cuándo una venta
+  cierra una posición larga existente, cuándo abre una posición corta nueva,
+  y cuándo una compra cierra un corto o cruza a largo, sin necesidad de
+  marcar las filas como "short"/"cover" (alcanza con Buy/Sell normales, como
+  las exportan los brokers).
 - **Dividendos e intereses**, netos de comisión/retención.
 - **Efectivo multi-moneda**: ledger simple de depósitos, retiros, compras,
   ventas, dividendos, intereses, comisiones y cambios de moneda.
+- **Actualización de precios en tiempo real**: el botón "Actualizar precios"
+  del panel consulta Yahoo Finance para todos los activos cargados (acciones
+  y ETFs de EE.UU., cripto, y acciones/CDIs de la Bolsa de Colombia) y guarda
+  un `PriceSnapshot` del día. Los activos para los que no hay dato (ticker no
+  listado en Yahoo Finance) se muestran al final del resultado para cargar el
+  precio a mano en Activos.
 - **Importación de archivos de broker** (`/importar`): subís el "Transaction
   History" o el "Activity Statement" de Interactive Brokers exportados como
-  CSV, o un CSV con la plantilla propia de Cartera para otros brokers, y la
-  app arma una vista previa de las transacciones antes de cargarlas.
+  CSV, un portafolio con columnas de efectivo/operaciones, un historial de
+  órdenes de un bróker colombiano, o un CSV con la plantilla propia de
+  Cartera, y la app arma una vista previa de las transacciones antes de
+  cargarlas. Antes de importar compara cada fila contra las transacciones ya
+  cargadas en la cuenta elegida y marca como **posible duplicado** las que
+  coinciden exactamente en tipo, activo, fecha, cantidad, precio y monto —
+  útil cuando volvés a exportar un rango de fechas que ya habías subido. Esta
+  detección es por coincidencia exacta: un mismo archivo re-agregado o
+  redondeado distinto por otro tracker (por ejemplo, dos lotes de una compra
+  fusionados en una sola fila, o un precio redondeado a otro decimal) **no**
+  se detecta como duplicado aunque lo sea — si sospechás que un archivo
+  representa las mismas operaciones que ya cargaste desde el reporte oficial
+  del broker, no lo importes, o revisá fila por fila antes de confirmar.
 - **Buscador de acciones/ETFs** (en Activos): lista de referencia con los
   tickers más comunes de EE.UU. y de la Bolsa de Colombia (BVC) para
   autocompletar nombre, mercado y moneda al dar de alta un activo — no es
-  exhaustiva, así que lo que no aparezca se carga a mano como siempre.
+  exhaustiva, así que lo que no aparezca se carga a mano como siempre. El
+  campo "mercado" (`exchange`) de un activo es lo que decide si el precio en
+  tiempo real se busca como acción de EE.UU./cripto o como acción/CDI de la
+  BVC (sufijo `.CL` en Yahoo Finance) — si un activo colombiano quedó sin
+  mercado asignado, la actualización de precios no va a encontrarlo.
 
 El motor de cálculo está en `src/lib/portfolio.ts` y tiene tests unitarios en
 `src/lib/portfolio.test.ts` que documentan y verifican la lógica (costo
@@ -158,8 +185,35 @@ Statement), `ibkrTransactionHistory.ts` (Transaction History),
 (historial de órdenes en español) y `generic.ts` (plantilla propia), cada
 uno con sus tests en `*.test.ts`.
 
+## Cuentas sin archivo de broker: fiducuenta, cripto, fondos
+
+No todas las cuentas tienen un CSV para importar. Estas se cargan como una
+cuenta más, con transacciones manuales:
+
+- **Fiducuenta (u otra cuenta de liquidez con rentabilidad)**: creála como
+  una `Account` normal. Cada ingreso de dinero es un `DEPOSIT`, cada retiro
+  un `WITHDRAWAL`, y el rendimiento que va pagando la fiduciaria se carga
+  periódicamente como `INTEREST` (mismo tratamiento que un interés
+  bancario). No hace falta ningún cambio en el motor de cálculo: el ledger
+  de efectivo ya sigue el saldo correctamente combinando estos tres tipos de
+  movimiento en la moneda de la cuenta (típicamente COP).
+- **Cripto (por ejemplo BTC en Binance)**: se maneja como cualquier otro
+  activo — `Asset` con `assetType = CRYPTO`, ticker en formato `BTC-USD`
+  para que la actualización de precios en tiempo real lo resuelva contra
+  Yahoo Finance, y transacciones `BUY`/`SELL` para cada operación. Los
+  depósitos/retiros de la moneda de esa cuenta (USD o USDT) se cargan como
+  `DEPOSIT`/`WITHDRAWAL` igual que en cualquier otra cuenta.
+- **Fondo de inversión (por ejemplo un fondo local operado a través de
+  Trii)**: se carga como un `Asset` más dentro de la cuenta del broker
+  (`assetType = FUND`), con su propio ticker/nombre y moneda (COP). Las
+  suscripciones y redenciones de unidades del fondo son `BUY`/`SELL` como
+  cualquier otro activo; si el fondo no tiene ticker en Yahoo Finance (lo
+  usual para fondos locales), el precio de la unidad se actualiza a mano en
+  Activos con el valor de la unidad que publique la fiduciaria/administradora.
+
 ## Datos y persistencia
 
-Los datos viven en `prisma/dev.db` (SQLite), un archivo local — no se suben
-al repositorio (está en `.gitignore`). Para respaldar tu cartera, copiá ese
-archivo.
+Los datos viven en una base **PostgreSQL** (ver `DATABASE_URL` en `.env` /
+en las variables de entorno de Vercel). En producción (Neon) los datos
+persisten automáticamente entre despliegues. Para respaldar tu cartera local
+o de Neon, usá `pg_dump $DATABASE_URL > backup.sql`.
