@@ -103,13 +103,23 @@ fijo:
    (podés entrar con tu cuenta de GitHub), hacé **Add New → Project** e
    importá el repositorio `JuanMaRobledo/Cartera`.
 3. En el paso de configuración del proyecto, abrí **Environment Variables**
-   y agregá `DATABASE_URL` con el connection string de Neon del paso 1.
+   y agregá `DATABASE_URL` con el connection string de Neon del paso 1, y
+   `CRON_SECRET` con cualquier contraseña larga que inventes (protege el
+   endpoint de actualización automática diaria para que no lo pueda llamar
+   cualquiera desde internet).
 4. Hacé clic en **Deploy**. Vercel instala las dependencias, crea las
    tablas en la base (`prisma db push`, corre solo como parte del build) y
    compila la app. Al terminar te da una URL fija
-   (`https://cartera-tu-usuario.vercel.app`) — esa es tu app.
+   (`https://cartera-tu-usuario.vercel.app`) — esa es tu app. Para
+   encontrarla de nuevo más adelante: [vercel.com/dashboard](https://vercel.com/dashboard)
+   → tu proyecto → botón "Visit".
 5. Cada vez que se sube un cambio a la rama `main` del repositorio, Vercel
    vuelve a desplegar automáticamente.
+6. **Actualización automática diaria**: `vercel.json` ya define un cron
+   (gratis en el plan Hobby) que llama a `/api/cron/daily-refresh` una vez
+   por día — actualiza precios y la TRM sin que tengas que apretar ningún
+   botón. Se activa solo al desplegar; no hace falta configurar nada más
+   que el `CRON_SECRET` del paso 3.
 
 Los datos quedan en Neon (en la nube), así que persisten entre despliegues y
 accedés desde cualquier dispositivo con esa URL.
