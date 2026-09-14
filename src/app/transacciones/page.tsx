@@ -80,7 +80,10 @@ export default function TransactionsPage() {
                   <td>{t.currencyCode}</td>
                   <td>{t.fxRateToBase}</td>
                   <td>{t.commission ? formatMoney(t.commission, t.currencyCode) : "—"}</td>
-                  <td>
+                  <td className="space-x-2 whitespace-nowrap">
+                    <Link href={`/transacciones/${t.id}/editar`} className="text-xs text-blue-600 hover:underline">
+                      Editar
+                    </Link>
                     <button className="text-xs loss-text" onClick={() => remove(t.id)}>
                       Eliminar
                     </button>
