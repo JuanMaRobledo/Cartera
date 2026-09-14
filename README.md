@@ -37,6 +37,13 @@ movimiento del tipo de cambio.
   un `PriceSnapshot` del día. Los activos para los que no hay dato (ticker no
   listado en Yahoo Finance) se muestran al final del resultado para cargar el
   precio a mano en Activos.
+- **TRM del día**: en Tipos de cambio, el botón "Obtener TRM del día" trae la
+  Tasa Representativa del Mercado (el tipo de cambio oficial USD/COP que
+  certifica la Superintendencia Financiera) desde el portal de datos abiertos
+  del gobierno colombiano y carga el `FxRate` de hoy automáticamente — para
+  moneda base USD actualiza COP, y para moneda base COP actualiza USD. Con
+  cualquier otra moneda base no hay nada que actualizar (haría falta una tasa
+  cruzada) y el botón lo indica en vez de cargar algo incorrecto.
 - **Importación de archivos de broker** (`/importar`): subís el "Transaction
   History" o el "Activity Statement" de Interactive Brokers exportados como
   CSV, un portafolio con columnas de efectivo/operaciones, un historial de

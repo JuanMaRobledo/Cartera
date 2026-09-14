@@ -21,6 +21,8 @@ export default function FxRatesPage() {
   const [baseCurrency, setBaseCurrency] = useState("USD");
   const [form, setForm] = useState({ currencyCode: "", date: "", rate: "" });
   const [error, setError] = useState<string | null>(null);
+  const [refreshingTrm, setRefreshingTrm] = useState(false);
+  const [trmMsg, setTrmMsg] = useState<string | null>(null);
 
   const load = () => {
     fetch("/api/fx-rates").then((r) => r.json()).then(setRates);
@@ -53,15 +55,44 @@ export default function FxRatesPage() {
     load();
   };
 
+  const refreshTrm = async () => {
+    setRefreshingTrm(true);
+    setTrmMsg(null);
+    try {
+      const res = await fetch("/api/fx-rates/trm-refresh", { method: "POST" });
+      const result = await res.json();
+      if (!res.ok) {
+        setTrmMsg(result.error ?? "No se pudo obtener la TRM del día.");
+        return;
+      }
+      setTrmMsg(`TRM de hoy: 1 USD = ${result.trm.toLocaleString("es-CO")} COP.`);
+      await load();
+    } finally {
+      setRefreshingTrm(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Tipos de cambio</h1>
-        <p className="text-sm text-slate-500">
-          1 unidad de la moneda = tantas unidades de la moneda base ({baseCurrency}). Cargá el tipo de cambio real que
-          usaste ese día (con el costo del cambio ya incluido si corresponde) para que la conversión a la moneda base
-          sea exacta.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Tipos de cambio</h1>
+          <p className="text-sm text-slate-500">
+            1 unidad de la moneda = tantas unidades de la moneda base ({baseCurrency}). Cargá el tipo de cambio real
+            que usaste ese día (con el costo del cambio ya incluido si corresponde) para que la conversión a la
+            moneda base sea exacta.
+          </p>
+        </div>
+        <div className="text-right">
+          <button className="btn-secondary" onClick={refreshTrm} disabled={refreshingTrm}>
+            {refreshingTrm ? "Consultando…" : "Obtener TRM del día"}
+          </button>
+          <p className="mt-1 max-w-xs text-xs text-slate-500">
+            Trae la TRM oficial (USD/COP) publicada por la Superintendencia Financiera y carga el tipo de cambio de
+            hoy automáticamente. Solo aplica si tu moneda base es USD o COP.
+          </p>
+          {trmMsg && <p className="mt-1 max-w-xs text-xs text-slate-600">{trmMsg}</p>}
+        </div>
       </div>
 
       <form onSubmit={submit} className="card grid grid-cols-1 gap-3 sm:grid-cols-4">
