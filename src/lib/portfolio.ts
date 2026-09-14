@@ -187,6 +187,11 @@ export function computePositions(
         if (dirBefore !== 0 && dirBefore !== dirTrade) {
           closingQty = Math.min(tradeQty, Math.abs(qtyBefore));
           openingQty = tradeQty - closingQty;
+          // Cuando qtyBefore ya venía con arrastre de coma flotante de ventas
+          // parciales anteriores, un cierre "exacto" puede dejar un resto
+          // ínfimo en openingQty (p. ej. 1.77e-15) que de otro modo abriría
+          // una posición fantasma en la dirección de la operación.
+          if (openingQty <= 1e-9) openingQty = 0;
         }
 
         if (closingQty > 0) {
@@ -241,6 +246,12 @@ export function computePositions(
           position.quantity += dirTrade * openingQty;
           position.costBasisLocal += addedBasisLocal;
           position.costBasisBase += addedBasisLocal * tx.fxRateToBase;
+        }
+
+        if (Math.abs(position.quantity) <= 1e-9) {
+          position.quantity = 0;
+          position.costBasisLocal = 0;
+          position.costBasisBase = 0;
         }
 
         const absQty = Math.abs(position.quantity);
