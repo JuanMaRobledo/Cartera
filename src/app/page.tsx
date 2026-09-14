@@ -54,13 +54,39 @@ interface PortfolioDto {
 export default function DashboardPage() {
   const [data, setData] = useState<PortfolioDto | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = () =>
     fetch("/api/portfolio")
       .then((r) => r.json())
       .then(setData)
       .catch(() => setError("No se pudo cargar la cartera."));
+
+  useEffect(() => {
+    load();
   }, []);
+
+  const refreshPrices = async () => {
+    setRefreshing(true);
+    setRefreshMsg(null);
+    try {
+      const res = await fetch("/api/prices/refresh", { method: "POST" });
+      const result = await res.json();
+      if (!res.ok) {
+        setRefreshMsg("No se pudieron actualizar los precios.");
+        return;
+      }
+      const { updated, failed } = result as { updated: unknown[]; failed: { ticker: string; error: string }[] };
+      setRefreshMsg(
+        `Se actualizaron ${updated.length} precio(s)` +
+          (failed.length > 0 ? `; sin datos para ${failed.map((f) => f.ticker).join(", ")}` : "."),
+      );
+      await load();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   if (error) return <p className="loss-text">{error}</p>;
   if (!data) return <p className="text-slate-500">Cargando…</p>;
@@ -70,15 +96,23 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Panel de cartera</h1>
-        <p className="text-sm text-slate-500">Todo expresado en moneda base: {baseCurrency}</p>
-        {summary.positionsMissingPrice > 0 && (
-          <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            {summary.positionsMissingPrice} posición(es) sin precio actual cargado — no se incluyen en el valor de
-            mercado. Cargalo en Activos.
-          </p>
-        )}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Panel de cartera</h1>
+          <p className="text-sm text-slate-500">Todo expresado en moneda base: {baseCurrency}</p>
+          {summary.positionsMissingPrice > 0 && (
+            <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              {summary.positionsMissingPrice} posición(es) sin precio actual cargado — no se incluyen en el valor de
+              mercado. Actualizalos con el botón o cargalos a mano en Activos.
+            </p>
+          )}
+        </div>
+        <div className="text-right">
+          <button className="btn-secondary" onClick={refreshPrices} disabled={refreshing}>
+            {refreshing ? "Actualizando…" : "Actualizar precios"}
+          </button>
+          {refreshMsg && <p className="mt-1 max-w-xs text-xs text-slate-500">{refreshMsg}</p>}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">

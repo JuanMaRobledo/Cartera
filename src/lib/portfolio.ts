@@ -6,6 +6,14 @@
 // moneda de la transacción equivale a `fxRateToBase` unidades de la moneda
 // base de la cartera (ej. si la base es USD y currencyCode es EUR con
 // fxRateToBase=1.08, entonces 1 EUR = 1.08 USD ese día).
+//
+// Posiciones cortas: `quantity` es una cantidad con signo. Una serie de
+// BUY/SELL que cruza cero se interpreta como cerrar la posición existente y
+// abrir una en la dirección contraria (vender más de lo que se tiene abre o
+// extiende un corto; comprar más de lo que se debe lo cierra y puede dejar
+// una posición larga). `avgCostLocal`/`avgCostBase` son siempre magnitudes
+// positivas (el precio promedio al que se abrió la posición actual, larga o
+// corta); `costBasisLocal`/`costBasisBase` son `|quantity| * avgCost`.
 
 import type { TransactionType } from "./enums";
 
@@ -160,59 +168,83 @@ export function computePositions(
     for (const tx of sorted) {
       const commission = tx.commission ?? 0;
 
-      if (tx.type === "BUY") {
-        const qty = tx.quantity ?? 0;
+      if (tx.type === "BUY" || tx.type === "SELL") {
+        const tradeQty = tx.quantity ?? 0;
         const price = tx.price ?? 0;
-        const totalCostLocal = qty * price + commission;
-        const totalCostBase = totalCostLocal * tx.fxRateToBase;
+        if (tradeQty <= 0) continue;
 
-        position.quantity += qty;
-        position.costBasisLocal += totalCostLocal;
-        position.costBasisBase += totalCostBase;
-        position.avgCostLocal = position.quantity > 0 ? position.costBasisLocal / position.quantity : 0;
-        position.avgCostBase = position.quantity > 0 ? position.costBasisBase / position.quantity : 0;
-      } else if (tx.type === "SELL") {
-        const qty = Math.min(tx.quantity ?? 0, position.quantity);
-        const price = tx.price ?? 0;
-        const grossLocal = qty * price;
-        const proceedsLocal = grossLocal - commission;
-        const proceedsBase = proceedsLocal * tx.fxRateToBase;
+        const qtyBefore = position.quantity;
+        const dirBefore = Math.sign(qtyBefore);
+        const dirTrade = tx.type === "BUY" ? 1 : -1;
 
-        const costLocal = position.avgCostLocal * qty;
-        const costBase = position.avgCostBase * qty;
-
-        const realizedPnLLocal = proceedsLocal - costLocal;
-        const realizedPnLBase = proceedsBase - costBase;
-        const localPerformanceBase = realizedPnLLocal * tx.fxRateToBase;
-        const fxEffectBase = realizedPnLBase - localPerformanceBase;
-
-        position.quantity -= qty;
-        position.costBasisLocal -= costLocal;
-        position.costBasisBase -= costBase;
-        if (position.quantity <= 1e-9) {
-          position.quantity = 0;
-          position.costBasisLocal = 0;
-          position.costBasisBase = 0;
+        // Si la operación va en contra de la posición existente, primero
+        // cierra hasta `|qtyBefore|` unidades; lo que sobre abre/extiende
+        // una posición nueva en la dirección de la operación (posiblemente
+        // cruzando de largo a corto o viceversa en una sola transacción).
+        let closingQty = 0;
+        let openingQty = tradeQty;
+        if (dirBefore !== 0 && dirBefore !== dirTrade) {
+          closingQty = Math.min(tradeQty, Math.abs(qtyBefore));
+          openingQty = tradeQty - closingQty;
         }
 
-        position.realizedPnLLocal += realizedPnLLocal;
-        position.realizedPnLBase += realizedPnLBase;
-        position.realizedLocalPerformanceBase += localPerformanceBase;
-        position.realizedFxEffectBase += fxEffectBase;
+        if (closingQty > 0) {
+          const closingCommission = commission * (closingQty / tradeQty);
+          const S = dirBefore; // dirección que se cierra: +1 posición larga, -1 corta
+          const realizedPnLLocal = S * closingQty * (price - position.avgCostLocal) - closingCommission;
+          const realizedPnLBase =
+            S * closingQty * (price * tx.fxRateToBase - position.avgCostBase) - closingCommission * tx.fxRateToBase;
+          const localPerformanceBase = realizedPnLLocal * tx.fxRateToBase;
+          const fxEffectBase = realizedPnLBase - localPerformanceBase;
 
-        position.lots.push({
-          transactionId: tx.id,
-          date: tx.date,
-          quantity: qty,
-          proceedsLocal,
-          costLocal,
-          realizedPnLLocal,
-          proceedsBase,
-          costBase,
-          realizedPnLBase,
-          localPerformanceBase,
-          fxEffectBase,
-        });
+          // proceedsLocal/costLocal son solo para el detalle informativo del lote.
+          const proceedsLocal = S > 0 ? closingQty * price - closingCommission : closingQty * position.avgCostLocal;
+          const costLocal = S > 0 ? closingQty * position.avgCostLocal : closingQty * price + closingCommission;
+
+          position.quantity += S > 0 ? -closingQty : closingQty;
+          position.costBasisLocal -= closingQty * position.avgCostLocal;
+          position.costBasisBase -= closingQty * position.avgCostBase;
+          if (Math.abs(position.quantity) <= 1e-9) {
+            position.quantity = 0;
+            position.costBasisLocal = 0;
+            position.costBasisBase = 0;
+          }
+
+          position.realizedPnLLocal += realizedPnLLocal;
+          position.realizedPnLBase += realizedPnLBase;
+          position.realizedLocalPerformanceBase += localPerformanceBase;
+          position.realizedFxEffectBase += fxEffectBase;
+
+          position.lots.push({
+            transactionId: tx.id,
+            date: tx.date,
+            quantity: closingQty,
+            proceedsLocal,
+            costLocal,
+            realizedPnLLocal,
+            proceedsBase: proceedsLocal * tx.fxRateToBase,
+            costBase: costLocal * tx.fxRateToBase,
+            realizedPnLBase,
+            localPerformanceBase,
+            fxEffectBase,
+          });
+        }
+
+        if (openingQty > 0) {
+          const openingCommission = commission * (openingQty / tradeQty);
+          // Al comprar (abrir/extender un largo) la comisión suma al costo;
+          // al vender (abrir/extender un corto) reduce lo efectivamente
+          // recibido, así que baja el precio de equilibrio para recomprar.
+          const addedBasisLocal =
+            dirTrade > 0 ? openingQty * price + openingCommission : openingQty * price - openingCommission;
+          position.quantity += dirTrade * openingQty;
+          position.costBasisLocal += addedBasisLocal;
+          position.costBasisBase += addedBasisLocal * tx.fxRateToBase;
+        }
+
+        const absQty = Math.abs(position.quantity);
+        position.avgCostLocal = absQty > 0 ? position.costBasisLocal / absQty : 0;
+        position.avgCostBase = absQty > 0 ? position.costBasisBase / absQty : 0;
       } else if (tx.type === "DIVIDEND") {
         const gross = tx.amount ?? (tx.quantity ?? 0) * (tx.price ?? 0);
         const dividendLocal = gross - commission;
@@ -226,14 +258,17 @@ export function computePositions(
 
     const quote = latestQuotes.get(assetId);
     const fxRate = latestFxRates.get(asset.currencyCode);
-    if (quote && fxRate !== undefined && position.quantity > 0) {
+    if (quote && fxRate !== undefined && position.quantity !== 0) {
       position.currentPriceLocal = quote.price;
       position.currentFxRate = fxRate;
       position.priceAsOf = quote.date;
       position.marketValueLocal = position.quantity * quote.price;
       position.marketValueBase = position.marketValueLocal * fxRate;
-      position.unrealizedPnLLocal = position.marketValueLocal - position.costBasisLocal;
-      position.unrealizedPnLBase = position.marketValueBase - position.costBasisBase;
+      // Generalizado para posiciones cortas (quantity < 0): cuando el precio
+      // baja por debajo del promedio al que se abrió el corto, la ganancia
+      // es positiva.
+      position.unrealizedPnLLocal = position.quantity * (quote.price - position.avgCostLocal);
+      position.unrealizedPnLBase = position.quantity * (quote.price * fxRate - position.avgCostBase);
       position.unrealizedLocalPerformanceBase = position.unrealizedPnLLocal * fxRate;
       position.unrealizedFxEffectBase = position.unrealizedPnLBase - position.unrealizedLocalPerformanceBase;
     }
@@ -331,7 +366,7 @@ export function computePortfolioSummary(positions: AssetPosition[], cashBalances
   let positionsMissingPrice = 0;
 
   for (const p of positions) {
-    if (p.quantity > 0 && p.marketValueBase == null) positionsMissingPrice += 1;
+    if (p.quantity !== 0 && p.marketValueBase == null) positionsMissingPrice += 1;
     totalMarketValueBase += p.marketValueBase ?? 0;
     totalCostBase += p.costBasisBase;
     totalUnrealizedBase += p.unrealizedPnLBase ?? 0;

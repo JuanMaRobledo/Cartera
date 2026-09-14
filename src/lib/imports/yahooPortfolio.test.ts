@@ -48,6 +48,19 @@ describe("parseYahooPortfolio", () => {
     expect(rows.find((r) => r.type === "SELL")).toMatchObject({ ticker: "FISV", quantity: 4.58238, price: 67.09 });
   });
 
+  it("mapea SHORT/COVER a SELL/BUY (el motor ya interpreta cruces de cero como cortos)", () => {
+    const sample = [
+      HEADER,
+      "TEAM,189.58,2026/09/04,16:00 EDT,0,189.71,193.425,186.54,1,20260807,143.91,4.0,0.36,,,,SHORT",
+      "TEAM,189.58,2026/09/04,16:00 EDT,0,189.71,193.425,186.54,1,20260807,152.1,3.0,0.35,,,,COVER",
+    ].join("\n");
+    const { rows, warnings } = parseYahooPortfolio(sample);
+    expect(warnings).toHaveLength(0);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({ type: "SELL", ticker: "TEAM", quantity: 4 });
+    expect(rows[1]).toMatchObject({ type: "BUY", ticker: "TEAM", quantity: 3 });
+  });
+
   it("asume USD también para cripto (BTC-USD)", () => {
     const { rows, warnings } = parseYahooPortfolio(CRYPTO_SAMPLE);
     expect(warnings).toHaveLength(0);

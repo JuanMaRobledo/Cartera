@@ -80,6 +80,7 @@ export function parseCoBrokerOrders(text: string): { rows: ProposedRow[]; warnin
       date,
       ticker: symbol,
       currencyCode: ASSUMED_CURRENCY,
+      exchange: "BVC",
       quantity,
       price,
       amount: null,

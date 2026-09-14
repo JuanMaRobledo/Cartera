@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAssetsMap, getFxRateNear } from "@/lib/data";
 import { detectAndParse, type ImportFormatOption } from "@/lib/imports";
+import { buildExistingSignatures, transactionSignature } from "@/lib/imports/duplicates";
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { csv, format } = body as { csv?: string; format?: ImportFormatOption };
+  const { csv, format, accountId } = body as { csv?: string; format?: ImportFormatOption; accountId?: string };
   if (!csv || typeof csv !== "string") {
     return NextResponse.json({ error: "Falta el contenido del archivo (csv)" }, { status: 400 });
   }
@@ -18,12 +19,18 @@ export async function POST(request: Request) {
     );
   }
 
-  const [assets, currencyRows] = await Promise.all([
+  const [assets, currencyRows, existingTx] = await Promise.all([
     getAssetsMap(),
     prisma.currency.findMany({ select: { code: true } }),
+    accountId
+      ? prisma.transaction.findMany({ where: { accountId }, include: { asset: true } })
+      : Promise.resolve([]),
   ]);
   const assetsByTicker = new Map([...assets.values()].map((a) => [a.ticker.toUpperCase(), a]));
   const currencyCodes = new Set(currencyRows.map((c) => c.code));
+  const existingSignatures = buildExistingSignatures(
+    existingTx.map((t) => ({ type: t.type, date: t.date, quantity: t.quantity, price: t.price, amount: t.amount, ticker: t.asset?.ticker ?? null })),
+  );
 
   const rows = await Promise.all(
     parsed.rows.map(async (row) => {
@@ -32,6 +39,18 @@ export async function POST(request: Request) {
       const validDate = !Number.isNaN(new Date(row.date).getTime());
       const fxRateToBase = currencyKnown && validDate ? await getFxRateNear(row.currencyCode, new Date(row.date)) : null;
       const currencyMismatch = !!existingAsset && existingAsset.currencyCode !== row.currencyCode;
+      const duplicate =
+        accountId != null &&
+        existingSignatures.has(
+          transactionSignature({
+            type: row.type,
+            ticker: row.ticker,
+            date: row.date,
+            quantity: row.quantity,
+            price: row.price,
+            amount: row.amount,
+          }),
+        );
 
       let reason: string | null = null;
       if (!validDate) reason = "Fecha inválida";
@@ -46,6 +65,7 @@ export async function POST(request: Request) {
         fxRateToBase,
         ready: reason == null,
         reason,
+        duplicate,
       };
     }),
   );

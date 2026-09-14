@@ -13,4 +13,6 @@ export interface ProposedRow {
   commission: number;
   notes: string;
   sourceSection: string;
+  /** Bolsa del activo si el formato de origen la conoce con certeza (ej. "BVC"), para poder pedir su cotización. */
+  exchange?: string | null;
 }
