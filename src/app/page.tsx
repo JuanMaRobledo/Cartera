@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { formatMoney, signClass } from "@/lib/format";
+import { useEffect, useMemo, useState } from "react";
+import { formatMoney, formatPercent, signClass } from "@/lib/format";
 import { ASSET_TYPE_LABELS } from "@/lib/enums";
 import { AllocationDonut } from "@/components/charts/AllocationDonut";
 import { PerformanceBreakdownChart } from "@/components/charts/PerformanceBreakdownChart";
+import { ColumnPicker, useVisibleColumns, type ColumnDef } from "@/components/ColumnPicker";
 
 interface PositionDto {
   assetId: string;
@@ -21,9 +22,11 @@ interface PositionDto {
   realizedPnLBase: number;
   dividendsBase: number;
   feesBase: number;
+  totalInvestedBase: number;
   totalReturnBase: number;
   totalReturnLocalPerformanceBase: number;
   totalReturnFxEffectBase: number;
+  returnPct: number | null;
 }
 
 interface CashBalanceDto {
@@ -32,9 +35,17 @@ interface CashBalanceDto {
   balanceBase: number | null;
 }
 
+interface CurrencyReturnDto {
+  currencyCode: string;
+  totalInvestedLocal: number;
+  totalReturnLocal: number;
+  returnPct: number | null;
+}
+
 interface SummaryDto {
   totalMarketValueBase: number;
   totalCostBase: number;
+  totalInvestedBase: number;
   totalUnrealizedBase: number;
   totalRealizedBase: number;
   totalDividendsBase: number;
@@ -43,6 +54,8 @@ interface SummaryDto {
   totalReturnBase: number;
   totalReturnLocalPerformanceBase: number;
   totalReturnFxEffectBase: number;
+  totalReturnPct: number | null;
+  returnByCurrency: CurrencyReturnDto[];
   positionsMissingPrice: number;
 }
 
@@ -102,6 +115,122 @@ export default function DashboardPage() {
       setRefreshing(false);
     }
   };
+
+  // Los hooks de abajo tienen que llamarse siempre, en el mismo orden, así
+  // que van antes de los "return" tempranos de carga/error — usan valores
+  // por defecto hasta que "data" llega.
+  const baseCurrencyForColumns = data?.baseCurrency ?? "USD";
+  const totalMarketValueBaseForColumns = data?.summary.totalMarketValueBase ?? 0;
+
+  const columns = useMemo<ColumnDef<PositionDto>[]>(
+    () => [
+      {
+        key: "activo",
+        label: "Activo",
+        defaultVisible: true,
+        render: (p) => (
+          <>
+            <div className="font-medium">{p.ticker}</div>
+            <div className="text-xs text-slate-500">{p.name}</div>
+          </>
+        ),
+      },
+      {
+        key: "tipo",
+        label: "Tipo",
+        defaultVisible: true,
+        render: (p) => ASSET_TYPE_LABELS[p.assetType as keyof typeof ASSET_TYPE_LABELS] ?? p.assetType,
+      },
+      { key: "cantidad", label: "Cantidad", defaultVisible: true, render: (p) => (p.quantity !== 0 ? p.quantity : "—") },
+      {
+        key: "peso",
+        label: "% Cartera",
+        defaultVisible: true,
+        render: (p) =>
+          p.marketValueBase != null && totalMarketValueBaseForColumns > 0
+            ? formatPercent(p.marketValueBase / totalMarketValueBaseForColumns)
+            : "—",
+      },
+      {
+        key: "costoProm",
+        label: "Costo prom.",
+        defaultVisible: true,
+        render: (p) => (p.quantity !== 0 ? formatMoney(p.avgCostLocal, p.currencyCode) : "—"),
+      },
+      {
+        key: "precioActual",
+        label: "Precio actual",
+        defaultVisible: true,
+        render: (p) => (p.currentPriceLocal != null ? formatMoney(p.currentPriceLocal, p.currencyCode) : "—"),
+      },
+      {
+        key: "valorMercado",
+        label: "Valor mercado",
+        defaultVisible: true,
+        render: (p) => (p.marketValueBase != null ? formatMoney(p.marketValueBase, baseCurrencyForColumns) : "—"),
+      },
+      {
+        key: "noRealizada",
+        label: "No realizada",
+        defaultVisible: true,
+        render: (p) =>
+          p.unrealizedPnLBase != null ? (
+            <span className={signClass(p.unrealizedPnLBase)}>{formatMoney(p.unrealizedPnLBase, baseCurrencyForColumns)}</span>
+          ) : (
+            "—"
+          ),
+      },
+      {
+        key: "realizada",
+        label: "Realizada",
+        defaultVisible: true,
+        render: (p) => <span className={signClass(p.realizedPnLBase)}>{formatMoney(p.realizedPnLBase, baseCurrencyForColumns)}</span>,
+      },
+      {
+        key: "dividendos",
+        label: "Dividendos",
+        defaultVisible: false,
+        render: (p) => formatMoney(p.dividendsBase, baseCurrencyForColumns),
+      },
+      {
+        key: "comisiones",
+        label: "Comisiones",
+        defaultVisible: false,
+        render: (p) => formatMoney(p.feesBase, baseCurrencyForColumns),
+      },
+      {
+        key: "retornoTotal",
+        label: "Retorno total",
+        defaultVisible: true,
+        render: (p) => <span className={signClass(p.totalReturnBase)}>{formatMoney(p.totalReturnBase, baseCurrencyForColumns)}</span>,
+      },
+      {
+        key: "retornoPct",
+        label: "Retorno %",
+        defaultVisible: true,
+        render: (p) => (p.returnPct != null ? <span className={signClass(p.returnPct)}>{formatPercent(p.returnPct)}</span> : "—"),
+      },
+      {
+        key: "localVsFx",
+        label: "Local vs. FX",
+        defaultVisible: true,
+        render: (p) => (
+          <span className="text-xs">
+            <span className={signClass(p.totalReturnLocalPerformanceBase)}>
+              Activo: {formatMoney(p.totalReturnLocalPerformanceBase, baseCurrencyForColumns)}
+            </span>
+            <br />
+            <span className={signClass(p.totalReturnFxEffectBase)}>
+              FX: {formatMoney(p.totalReturnFxEffectBase, baseCurrencyForColumns)}
+            </span>
+          </span>
+        ),
+      },
+    ],
+    [baseCurrencyForColumns, totalMarketValueBaseForColumns],
+  );
+  const [visibleColumns, toggleColumn] = useVisibleColumns("cartera:columnas-posiciones", columns);
+  const shownColumns = columns.filter((c) => visibleColumns.has(c.key));
 
   if (error) return <p className="loss-text">{error}</p>;
   if (!data) return <p className="text-slate-500">Cargando…</p>;
@@ -210,57 +339,57 @@ export default function DashboardPage() {
       </div>
 
       <div className="card">
+        <h2 className="mb-1 font-medium">Retorno %</h2>
+        <p className="mb-3 text-sm text-slate-500">
+          Sobre el capital total puesto en cada activo alguna vez (no solo lo que sigue invertido hoy).
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Metric
+            label="Cartera completa"
+            value={summary.totalReturnPct}
+            baseCurrency=""
+            format={(v) => formatPercent(v)}
+          />
+          {summary.returnByCurrency.map((c) => (
+            <Metric
+              key={c.currencyCode}
+              label={`En ${c.currencyCode} (sin efecto cambiario)`}
+              value={c.returnPct}
+              baseCurrency=""
+              format={(v) => formatPercent(v)}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="card">
         <h2 className="mb-1 font-medium">Composición de la cartera</h2>
         <p className="mb-3 text-sm text-slate-500">Valor de mercado de las posiciones abiertas, por tipo de activo.</p>
         <AllocationDonut data={allocationByType} baseCurrency={baseCurrency} />
       </div>
 
       <div className="card overflow-x-auto">
-        <h2 className="mb-3 font-medium">Posiciones abiertas</h2>
+        <div className="mb-3 flex items-center justify-between gap-4">
+          <h2 className="font-medium">Posiciones abiertas</h2>
+          <ColumnPicker columns={columns} visible={visibleColumns} onToggle={toggleColumn} />
+        </div>
         {openPositions.length === 0 ? (
           <p className="text-sm text-slate-500">Todavía no tenés posiciones abiertas.</p>
         ) : (
           <table className="table-base">
             <thead>
               <tr>
-                <th>Activo</th>
-                <th>Tipo</th>
-                <th>Cantidad</th>
-                <th>Costo prom.</th>
-                <th>Precio actual</th>
-                <th>Valor mercado</th>
-                <th>No realizada</th>
-                <th>Realizada</th>
-                <th>Retorno total</th>
-                <th>Local vs. FX</th>
+                {shownColumns.map((c) => (
+                  <th key={c.key}>{c.label}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {openPositions.map((p) => (
                 <tr key={p.assetId}>
-                  <td>
-                    <div className="font-medium">{p.ticker}</div>
-                    <div className="text-xs text-slate-500">{p.name}</div>
-                  </td>
-                  <td>{ASSET_TYPE_LABELS[p.assetType as keyof typeof ASSET_TYPE_LABELS] ?? p.assetType}</td>
-                  <td>{p.quantity}</td>
-                  <td>{formatMoney(p.avgCostLocal, p.currencyCode)}</td>
-                  <td>{p.currentPriceLocal != null ? formatMoney(p.currentPriceLocal, p.currencyCode) : "—"}</td>
-                  <td>{p.marketValueBase != null ? formatMoney(p.marketValueBase, baseCurrency) : "—"}</td>
-                  <td className={signClass(p.unrealizedPnLBase ?? 0)}>
-                    {p.unrealizedPnLBase != null ? formatMoney(p.unrealizedPnLBase, baseCurrency) : "—"}
-                  </td>
-                  <td className={signClass(p.realizedPnLBase)}>{formatMoney(p.realizedPnLBase, baseCurrency)}</td>
-                  <td className={signClass(p.totalReturnBase)}>{formatMoney(p.totalReturnBase, baseCurrency)}</td>
-                  <td className="text-xs">
-                    <span className={signClass(p.totalReturnLocalPerformanceBase)}>
-                      Activo: {formatMoney(p.totalReturnLocalPerformanceBase, baseCurrency)}
-                    </span>
-                    <br />
-                    <span className={signClass(p.totalReturnFxEffectBase)}>
-                      FX: {formatMoney(p.totalReturnFxEffectBase, baseCurrency)}
-                    </span>
-                  </td>
+                  {shownColumns.map((c) => (
+                    <td key={c.key}>{c.render(p)}</td>
+                  ))}
                 </tr>
               ))}
             </tbody>
@@ -274,36 +403,17 @@ export default function DashboardPage() {
           <table className="table-base mt-3">
             <thead>
               <tr>
-                <th>Activo</th>
-                <th>Tipo</th>
-                <th>Realizada</th>
-                <th>Dividendos</th>
-                <th>Comisiones</th>
-                <th>Retorno total</th>
-                <th>Local vs. FX</th>
+                {shownColumns.map((c) => (
+                  <th key={c.key}>{c.label}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {closedPositions.map((p) => (
                 <tr key={p.assetId}>
-                  <td>
-                    <div className="font-medium">{p.ticker}</div>
-                    <div className="text-xs text-slate-500">{p.name}</div>
-                  </td>
-                  <td>{ASSET_TYPE_LABELS[p.assetType as keyof typeof ASSET_TYPE_LABELS] ?? p.assetType}</td>
-                  <td className={signClass(p.realizedPnLBase)}>{formatMoney(p.realizedPnLBase, baseCurrency)}</td>
-                  <td>{formatMoney(p.dividendsBase, baseCurrency)}</td>
-                  <td>{formatMoney(p.feesBase, baseCurrency)}</td>
-                  <td className={signClass(p.totalReturnBase)}>{formatMoney(p.totalReturnBase, baseCurrency)}</td>
-                  <td className="text-xs">
-                    <span className={signClass(p.totalReturnLocalPerformanceBase)}>
-                      Activo: {formatMoney(p.totalReturnLocalPerformanceBase, baseCurrency)}
-                    </span>
-                    <br />
-                    <span className={signClass(p.totalReturnFxEffectBase)}>
-                      FX: {formatMoney(p.totalReturnFxEffectBase, baseCurrency)}
-                    </span>
-                  </td>
+                  {shownColumns.map((c) => (
+                    <td key={c.key}>{c.render(p)}</td>
+                  ))}
                 </tr>
               ))}
             </tbody>
@@ -359,11 +469,23 @@ function SummaryCard({
   );
 }
 
-function Metric({ label, value, baseCurrency }: { label: string; value: number; baseCurrency: string }) {
+function Metric({
+  label,
+  value,
+  baseCurrency,
+  format,
+}: {
+  label: string;
+  value: number | null;
+  baseCurrency: string;
+  format?: (value: number) => string;
+}) {
   return (
     <div>
       <div className="text-xs text-slate-500">{label}</div>
-      <div className={`text-lg font-semibold ${signClass(value)}`}>{formatMoney(value, baseCurrency)}</div>
+      <div className={`text-lg font-semibold ${value != null ? signClass(value) : ""}`}>
+        {value == null ? "—" : format ? format(value) : formatMoney(value, baseCurrency)}
+      </div>
     </div>
   );
 }

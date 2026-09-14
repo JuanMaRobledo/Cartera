@@ -76,6 +76,20 @@ movimiento del tipo de cambio.
   del activo/efecto cambiario como gráfico de barras, y la composición de la
   cartera por tipo de activo como dona; Tipos de cambio grafica el histórico
   de TRM. Usan `recharts`, componentes reutilizables en `src/components/charts/`.
+- **Peso y retorno % por posición**: la tabla de posiciones muestra qué
+  porcentaje de la cartera representa cada activo (`% Cartera`, sobre el
+  valor de mercado total) y su retorno % (`Retorno %`), calculado sobre todo
+  el capital que se puso alguna vez en ese activo — así una posición ya
+  cerrada también tiene un retorno % con sentido, no solo el saldo en $.
+- **Retorno % por moneda**: además del retorno % de toda la cartera, se
+  separa el retorno propio de cada moneda (p. ej. "en USD" y "en COP")
+  usando el desempeño en moneda local de cada grupo de activos, sin el
+  efecto cambiario — para responder "¿cómo les fue a mis dólares en dólares,
+  y a mis pesos en pesos?" por separado.
+- **Columnas personalizables**: el botón "Columnas" de la tabla de
+  posiciones deja tildar o destildar qué columnas mostrar (cantidad, costo
+  promedio, comisiones, dividendos, retorno %, etc.); la elección se guarda
+  en el navegador (`localStorage`) para la próxima visita.
 
 El motor de cálculo está en `src/lib/portfolio.ts` y tiene tests unitarios en
 `src/lib/portfolio.test.ts` que documentan y verifican la lógica (costo
