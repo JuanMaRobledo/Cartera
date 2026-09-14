@@ -44,6 +44,11 @@ movimiento del tipo de cambio.
   moneda base USD actualiza COP, y para moneda base COP actualiza USD. Con
   cualquier otra moneda base no hay nada que actualizar (haría falta una tasa
   cruzada) y el botón lo indica en vez de cargar algo incorrecto.
+- **Histórico de TRM**: para importar transacciones viejas en COP hace falta
+  el tipo de cambio de esa época, no el de hoy — el formulario "Histórico de
+  TRM" (misma página) trae, para un rango de fechas, una fila de `FxRate` por
+  cada día en que la TRM cambió de valor, así cualquier fecha del rango queda
+  cubierta.
 - **Importación de archivos de broker** (`/importar`): subís el "Transaction
   History" o el "Activity Statement" de Interactive Brokers exportados como
   CSV, un portafolio con columnas de efectivo/operaciones, un historial de
