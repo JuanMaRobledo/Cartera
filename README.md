@@ -90,6 +90,10 @@ movimiento del tipo de cambio.
   posiciones deja tildar o destildar qué columnas mostrar (cantidad, costo
   promedio, comisiones, dividendos, retorno %, etc.); la elección se guarda
   en el navegador (`localStorage`) para la próxima visita.
+- **Editar transacciones**: además de crear y borrar, cada fila de
+  "Transacciones" tiene un link "Editar" que abre el mismo formulario de alta
+  precargado con los valores existentes (comisión incluida) y guarda los
+  cambios con `PATCH /api/transactions/:id`.
 
 El motor de cálculo está en `src/lib/portfolio.ts` y tiene tests unitarios en
 `src/lib/portfolio.test.ts` que documentan y verifican la lógica (costo

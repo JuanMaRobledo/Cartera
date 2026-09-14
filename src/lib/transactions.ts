@@ -24,12 +24,15 @@ export interface TransactionInput {
 export class TransactionValidationError extends Error {}
 
 /**
- * Valida una transacción, resuelve el tipo de cambio a moneda base cuando no
- * viene dado (usando el más cercano cargado en FxRate) y la crea. Usado
- * tanto por el alta manual de transacciones como por el importador masivo,
- * para que ambos caminos apliquen exactamente las mismas reglas.
+ * Chequeos de forma compartidos entre el alta (que además resuelve el tipo de
+ * cambio) y la edición (que recibe el tipo de cambio ya resuelto).
  */
-export async function resolveAndCreateTransaction(input: TransactionInput) {
+export function validateTransactionInput(
+  input: Pick<
+    TransactionInput,
+    "type" | "assetId" | "quantity" | "price" | "fxFromCurrency" | "fxFromAmount" | "fxToCurrency" | "fxToAmount"
+  >,
+) {
   if (!TRANSACTION_TYPES.includes(input.type)) {
     throw new TransactionValidationError(`type inválido: ${input.type}`);
   }
@@ -47,6 +50,16 @@ export async function resolveAndCreateTransaction(input: TransactionInput) {
       "FX_CONVERT requiere fxFromCurrency, fxFromAmount, fxToCurrency y fxToAmount",
     );
   }
+}
+
+/**
+ * Valida una transacción, resuelve el tipo de cambio a moneda base cuando no
+ * viene dado (usando el más cercano cargado en FxRate) y la crea. Usado
+ * tanto por el alta manual de transacciones como por el importador masivo,
+ * para que ambos caminos apliquen exactamente las mismas reglas.
+ */
+export async function resolveAndCreateTransaction(input: TransactionInput) {
+  validateTransactionInput(input);
 
   const resolvedFxRate = input.fxRateToBase ?? (await getFxRateNear(input.currencyCode, input.date));
   if (resolvedFxRate == null) {
