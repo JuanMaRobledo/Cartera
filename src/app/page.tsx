@@ -106,6 +106,8 @@ export default function DashboardPage() {
 
   const { summary, positions, cashBalances, baseCurrency } = data;
   const investedTotal = summary.totalMarketValueBase + summary.totalCashBase;
+  const openPositions = positions.filter((p) => p.quantity !== 0);
+  const closedPositions = positions.filter((p) => p.quantity === 0);
 
   return (
     <div className="space-y-6">
@@ -184,9 +186,9 @@ export default function DashboardPage() {
       </div>
 
       <div className="card overflow-x-auto">
-        <h2 className="mb-3 font-medium">Posiciones</h2>
-        {positions.length === 0 ? (
-          <p className="text-sm text-slate-500">Todavía no cargaste transacciones.</p>
+        <h2 className="mb-3 font-medium">Posiciones abiertas</h2>
+        {openPositions.length === 0 ? (
+          <p className="text-sm text-slate-500">Todavía no tenés posiciones abiertas.</p>
         ) : (
           <table className="table-base">
             <thead>
@@ -204,7 +206,7 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {positions.map((p) => (
+              {openPositions.map((p) => (
                 <tr key={p.assetId}>
                   <td>
                     <div className="font-medium">{p.ticker}</div>
@@ -235,6 +237,49 @@ export default function DashboardPage() {
           </table>
         )}
       </div>
+
+      {closedPositions.length > 0 && (
+        <details className="card overflow-x-auto">
+          <summary className="cursor-pointer font-medium">Posiciones cerradas ({closedPositions.length})</summary>
+          <table className="table-base mt-3">
+            <thead>
+              <tr>
+                <th>Activo</th>
+                <th>Tipo</th>
+                <th>Realizada</th>
+                <th>Dividendos</th>
+                <th>Comisiones</th>
+                <th>Retorno total</th>
+                <th>Local vs. FX</th>
+              </tr>
+            </thead>
+            <tbody>
+              {closedPositions.map((p) => (
+                <tr key={p.assetId}>
+                  <td>
+                    <div className="font-medium">{p.ticker}</div>
+                    <div className="text-xs text-slate-500">{p.name}</div>
+                  </td>
+                  <td>{ASSET_TYPE_LABELS[p.assetType as keyof typeof ASSET_TYPE_LABELS] ?? p.assetType}</td>
+                  <td className={signClass(p.realizedPnLBase)}>{formatMoney(p.realizedPnLBase, baseCurrency)}</td>
+                  <td>{formatMoney(p.dividendsBase, baseCurrency)}</td>
+                  <td>{formatMoney(p.feesBase, baseCurrency)}</td>
+                  <td className={signClass(p.totalReturnBase)}>{formatMoney(p.totalReturnBase, baseCurrency)}</td>
+                  <td className="text-xs">
+                    <span className={signClass(p.totalReturnLocalPerformanceBase)}>
+                      Activo: {formatMoney(p.totalReturnLocalPerformanceBase, baseCurrency)}
+                    </span>
+                    <br />
+                    <span className={signClass(p.totalReturnFxEffectBase)}>
+                      FX: {formatMoney(p.totalReturnFxEffectBase, baseCurrency)}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </details>
+      )}
 
       <div className="card overflow-x-auto">
         <h2 className="mb-3 font-medium">Saldos de efectivo</h2>
