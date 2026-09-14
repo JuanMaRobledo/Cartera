@@ -72,6 +72,10 @@ movimiento del tipo de cambio.
   tiempo real se busca como acción de EE.UU./cripto o como acción/CDI de la
   BVC (sufijo `.CL` en Yahoo Finance) — si un activo colombiano quedó sin
   mercado asignado, la actualización de precios no va a encontrarlo.
+- **Gráficos**: el panel muestra la descomposición retorno total/desempeño
+  del activo/efecto cambiario como gráfico de barras, y la composición de la
+  cartera por tipo de activo como dona; Tipos de cambio grafica el histórico
+  de TRM. Usan `recharts`, componentes reutilizables en `src/components/charts/`.
 
 El motor de cálculo está en `src/lib/portfolio.ts` y tiene tests unitarios en
 `src/lib/portfolio.test.ts` que documentan y verifican la lógica (costo

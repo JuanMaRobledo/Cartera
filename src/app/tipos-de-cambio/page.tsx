@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { formatDate } from "@/lib/format";
+import { TrmHistoryChart } from "@/components/charts/TrmHistoryChart";
 
 interface Currency {
   code: string;
@@ -156,6 +157,22 @@ export default function FxRatesPage() {
         {backfillMsg && <p className="text-sm text-slate-600 sm:col-span-4">{backfillMsg}</p>}
       </form>
 
+      {(() => {
+        // La TRM se guarda como FxRate de COP (rate = 1/TRM) si la base es USD,
+        // o como FxRate de USD (rate = TRM directo) si la base es COP.
+        const trmCurrency = baseCurrency === "COP" ? "USD" : "COP";
+        const trmPoints = rates
+          .filter((r) => r.currencyCode === trmCurrency && r.source === "TRM")
+          .map((r) => ({ date: r.date, trm: baseCurrency === "COP" ? r.rate : 1 / r.rate }))
+          .sort((a, b) => a.date.localeCompare(b.date));
+        return trmPoints.length > 1 ? (
+          <div className="card">
+            <h2 className="mb-3 font-medium">Histórico de TRM (USD/COP)</h2>
+            <TrmHistoryChart data={trmPoints} />
+          </div>
+        ) : null;
+      })()}
+
       <form onSubmit={submit} className="card grid grid-cols-1 gap-3 sm:grid-cols-4">
         <div>
           <label className="label">Moneda</label>
@@ -202,34 +219,62 @@ export default function FxRatesPage() {
       </form>
       {error && <p className="loss-text text-sm">{error}</p>}
 
-      <div className="card overflow-x-auto">
-        <table className="table-base">
-          <thead>
-            <tr>
-              <th>Moneda</th>
-              <th>Fecha</th>
-              <th>Tipo de cambio</th>
-              <th>Origen</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rates.map((r) => (
-              <tr key={r.id}>
-                <td className="font-medium">{r.currencyCode}</td>
-                <td>{formatDate(r.date)}</td>
-                <td>{r.rate}</td>
-                <td>{r.source}</td>
-                <td>
-                  <button className="text-xs loss-text" onClick={() => remove(r.id)}>
-                    Eliminar
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {(() => {
+        const manual = rates.filter((r) => r.source !== "TRM");
+        const bulkTrm = rates.filter((r) => r.source === "TRM");
+        return (
+          <>
+            <div className="card overflow-x-auto">
+              {manual.length === 0 ? (
+                <p className="text-sm text-slate-500">Sin tipos de cambio cargados a mano todavía.</p>
+              ) : (
+                <RatesTable rows={manual} onRemove={remove} />
+              )}
+            </div>
+            {bulkTrm.length > 0 && (
+              <details className="card overflow-x-auto">
+                <summary className="cursor-pointer font-medium">
+                  Historial completo de TRM ({bulkTrm.length} fechas)
+                </summary>
+                <div className="mt-3">
+                  <RatesTable rows={bulkTrm} onRemove={remove} />
+                </div>
+              </details>
+            )}
+          </>
+        );
+      })()}
     </div>
+  );
+}
+
+function RatesTable({ rows, onRemove }: { rows: FxRate[]; onRemove: (id: string) => void }) {
+  return (
+    <table className="table-base">
+      <thead>
+        <tr>
+          <th>Moneda</th>
+          <th>Fecha</th>
+          <th>Tipo de cambio</th>
+          <th>Origen</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r) => (
+          <tr key={r.id}>
+            <td className="font-medium">{r.currencyCode}</td>
+            <td>{formatDate(r.date)}</td>
+            <td>{r.rate}</td>
+            <td>{r.source}</td>
+            <td>
+              <button className="text-xs loss-text" onClick={() => onRemove(r.id)}>
+                Eliminar
+              </button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
