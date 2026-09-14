@@ -94,6 +94,15 @@ movimiento del tipo de cambio.
   "Transacciones" tiene un link "Editar" que abre el mismo formulario de alta
   precargado con los valores existentes (comisión incluida) y guarda los
   cambios con `PATCH /api/transactions/:id`.
+- **Contraseña de acceso**: toda la app (páginas y API, salvo `/api/cron/*`
+  que usa su propio `CRON_SECRET`) queda detrás de una contraseña única
+  definida en la variable de entorno `APP_PASSWORD`. Sin esa variable
+  configurada la app queda abierta (para no exigir setup en desarrollo
+  local); en producción hay que definirla en Vercel para que esto proteja
+  algo — ver la sección de despliegue más abajo. El gatekeeper vive en
+  `src/proxy.ts` (Proxy/Middleware de Next.js) y la sesión es una cookie
+  `HttpOnly` con el hash de la contraseña, nunca la contraseña en texto
+  plano.
 
 El motor de cálculo está en `src/lib/portfolio.ts` y tiene tests unitarios en
 `src/lib/portfolio.test.ts` que documentan y verifican la lógica (costo
@@ -125,10 +134,14 @@ fijo:
    (podés entrar con tu cuenta de GitHub), hacé **Add New → Project** e
    importá el repositorio `JuanMaRobledo/Cartera`.
 3. En el paso de configuración del proyecto, abrí **Environment Variables**
-   y agregá `DATABASE_URL` con el connection string de Neon del paso 1, y
-   `CRON_SECRET` con cualquier contraseña larga que inventes (protege el
-   endpoint de actualización automática diaria para que no lo pueda llamar
-   cualquiera desde internet).
+   y agregá:
+   - `DATABASE_URL` con el connection string de Neon del paso 1.
+   - `CRON_SECRET` con cualquier contraseña larga que inventes (protege el
+     endpoint de actualización automática diaria para que no lo pueda llamar
+     cualquiera desde internet).
+   - `APP_PASSWORD` con la contraseña que vas a usar para entrar a la app —
+     **sin esta variable la app queda públicamente accesible para cualquiera
+     que tenga la URL**, sin login de ningún tipo.
 4. Hacé clic en **Deploy**. Vercel instala las dependencias, crea las
    tablas en la base (`prisma db push`, corre solo como parte del build) y
    compila la app. Al terminar te da una URL fija

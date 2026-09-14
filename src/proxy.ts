@@ -1,0 +1,28 @@
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { SESSION_COOKIE, isValidSession } from "@/lib/auth";
+
+/**
+ * Gatekeeper único: sin APP_PASSWORD configurada la app queda abierta (útil
+ * en desarrollo local); en producción hay que definir esa variable en Vercel
+ * para que esto proteja algo. /api/cron queda afuera porque esa ruta ya
+ * valida su propio CRON_SECRET (Vercel la llama sin la cookie de sesión).
+ */
+export function proxy(request: NextRequest) {
+  const token = request.cookies.get(SESSION_COOKIE)?.value;
+  if (isValidSession(token)) {
+    return NextResponse.next();
+  }
+
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
+  const loginUrl = new URL("/login", request.url);
+  loginUrl.searchParams.set("next", request.nextUrl.pathname);
+  return NextResponse.redirect(loginUrl);
+}
+
+export const config = {
+  matcher: ["/((?!login|api/login|api/cron|_next/static|_next/image|favicon.ico).*)"],
+};
