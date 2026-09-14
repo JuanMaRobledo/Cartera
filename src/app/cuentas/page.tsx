@@ -14,12 +14,36 @@ export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [form, setForm] = useState({ name: "", broker: "", kind: "BROKERAGE" });
   const [error, setError] = useState<string | null>(null);
+  const [settingUp, setSettingUp] = useState(false);
+  const [setupMsg, setSetupMsg] = useState<string | null>(null);
 
   const load = () => fetch("/api/accounts").then((r) => r.json()).then(setAccounts);
 
   useEffect(() => {
     load();
   }, []);
+
+  const createSuggested = async () => {
+    setSettingUp(true);
+    setSetupMsg(null);
+    try {
+      const res = await fetch("/api/setup/suggested-accounts", { method: "POST" });
+      const result = await res.json();
+      if (!res.ok) {
+        setSetupMsg("No se pudo crear la estructura sugerida.");
+        return;
+      }
+      const { created, skipped } = result as { created: string[]; skipped: string[] };
+      setSetupMsg(
+        created.length > 0
+          ? `Se crearon: ${created.join(", ")}.` + (skipped.length > 0 ? ` Ya existían: ${skipped.join(", ")}.` : "")
+          : "Ya estaban todas creadas, no se agregó ninguna.",
+      );
+      await load();
+    } finally {
+      setSettingUp(false);
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +68,19 @@ export default function AccountsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Cuentas</h1>
+      <div className="flex items-start justify-between gap-4">
+        <h1 className="text-2xl font-semibold">Cuentas</h1>
+        <div className="text-right">
+          <button className="btn-secondary" onClick={createSuggested} disabled={settingUp}>
+            {settingUp ? "Creando…" : "Crear cuentas sugeridas"}
+          </button>
+          <p className="mt-1 max-w-xs text-xs text-slate-500">
+            Crea USD, COP, e Interactive Brokers / Hapi / Binance / Trii Colombia / Fiducuenta si todavía no existen
+            — no duplica las que ya tengas.
+          </p>
+          {setupMsg && <p className="mt-1 max-w-xs text-xs text-slate-600">{setupMsg}</p>}
+        </div>
+      </div>
 
       <form onSubmit={submit} className="card grid grid-cols-1 gap-3 sm:grid-cols-4">
         <div>
