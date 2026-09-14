@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { formatMoney, signClass } from "@/lib/format";
 import { ASSET_TYPE_LABELS } from "@/lib/enums";
+import { AllocationDonut } from "@/components/charts/AllocationDonut";
+import { PerformanceBreakdownChart } from "@/components/charts/PerformanceBreakdownChart";
 
 interface PositionDto {
   assetId: string;
@@ -109,6 +111,14 @@ export default function DashboardPage() {
   const openPositions = positions.filter((p) => p.quantity !== 0);
   const closedPositions = positions.filter((p) => p.quantity === 0);
 
+  const allocationByType = Object.entries(
+    openPositions.reduce<Record<string, number>>((acc, p) => {
+      const label = ASSET_TYPE_LABELS[p.assetType as keyof typeof ASSET_TYPE_LABELS] ?? p.assetType;
+      acc[label] = (acc[label] ?? 0) + (p.marketValueBase ?? 0);
+      return acc;
+    }, {}),
+  ).map(([name, value]) => ({ name, value }));
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -148,13 +158,19 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <SummaryCard label="Valor de mercado" value={formatMoney(summary.totalMarketValueBase, baseCurrency)} />
-        <SummaryCard label="Efectivo" value={formatMoney(summary.totalCashBase, baseCurrency)} />
-        <SummaryCard label="Patrimonio total" value={formatMoney(investedTotal, baseCurrency)} />
+        <SummaryCard label="Valor de mercado" value={formatMoney(summary.totalMarketValueBase, baseCurrency)} border="border-l-sky-500" />
+        <SummaryCard
+          label="Efectivo"
+          value={formatMoney(summary.totalCashBase, baseCurrency)}
+          className={signClass(summary.totalCashBase)}
+          border={summary.totalCashBase < 0 ? "border-l-loss" : "border-l-sky-500"}
+        />
+        <SummaryCard label="Patrimonio total" value={formatMoney(investedTotal, baseCurrency)} border="border-l-indigo-500" />
         <SummaryCard
           label="Retorno total"
           value={formatMoney(summary.totalReturnBase, baseCurrency)}
           className={signClass(summary.totalReturnBase)}
+          border={summary.totalReturnBase >= 0 ? "border-l-gain" : "border-l-loss"}
         />
       </div>
 
@@ -183,6 +199,20 @@ export default function DashboardPage() {
           <Row label="Dividendos e intereses" value={formatMoney(summary.totalDividendsBase, baseCurrency)} />
           <Row label="Comisiones / gastos" value={formatMoney(summary.totalFeesBase, baseCurrency)} />
         </dl>
+        <div className="mt-4">
+          <PerformanceBreakdownChart
+            totalReturn={summary.totalReturnBase}
+            localPerformance={summary.totalReturnLocalPerformanceBase}
+            fxEffect={summary.totalReturnFxEffectBase}
+            baseCurrency={baseCurrency}
+          />
+        </div>
+      </div>
+
+      <div className="card">
+        <h2 className="mb-1 font-medium">Composición de la cartera</h2>
+        <p className="mb-3 text-sm text-slate-500">Valor de mercado de las posiciones abiertas, por tipo de activo.</p>
+        <AllocationDonut data={allocationByType} baseCurrency={baseCurrency} />
       </div>
 
       <div className="card overflow-x-auto">
@@ -310,9 +340,19 @@ export default function DashboardPage() {
   );
 }
 
-function SummaryCard({ label, value, className }: { label: string; value: string; className?: string }) {
+function SummaryCard({
+  label,
+  value,
+  className,
+  border,
+}: {
+  label: string;
+  value: string;
+  className?: string;
+  border?: string;
+}) {
   return (
-    <div className="card">
+    <div className={`stat-card ${border ?? "border-l-slate-300"}`}>
       <div className="text-xs text-slate-500">{label}</div>
       <div className={`mt-1 text-xl font-semibold ${className ?? ""}`}>{value}</div>
     </div>

@@ -205,6 +205,24 @@ describe("computePositions - posiciones cortas", () => {
   });
 });
 
+describe("computePositions - arrastre de coma flotante al cerrar", () => {
+  it("una posición liquidada en varias ventas parciales queda en cantidad exactamente 0, no en un residuo ínfimo", () => {
+    // 100 - 33.1 - 33.1 - 33.8 no da exactamente 0 en aritmética de punto
+    // flotante (da ~7.1e-15) — sin el guard contra ese arrastre, ese resto
+    // se interpretaba como abrir una posición corta fantasma en la última venta.
+    const txs: RawTransaction[] = [
+      tx({ type: "BUY", quantity: 100, price: 10 }),
+      tx({ type: "SELL", quantity: 33.1, price: 11 }),
+      tx({ type: "SELL", quantity: 33.1, price: 11 }),
+      tx({ type: "SELL", quantity: 33.8, price: 11 }),
+    ];
+    const [p] = computePositions(txs, new Map([["a1", asset()]]), new Map(), new Map());
+    expect(p.quantity).toBe(0);
+    expect(p.costBasisLocal).toBe(0);
+    expect(p.avgCostLocal).toBe(0);
+  });
+});
+
 describe("dividendos y comisiones", () => {
   it("suma dividendos netos de comisión/retención al total return", () => {
     const assets = new Map([["a1", asset()]]);
