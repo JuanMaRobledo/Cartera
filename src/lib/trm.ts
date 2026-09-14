@@ -52,3 +52,24 @@ export async function fetchTrm(): Promise<TrmResult | null> {
     clearTimeout(timeout);
   }
 }
+
+/** Todo el historial de TRM (una fila por cada día en que cambió el valor,
+ * no por día calendario) entre dos fechas YYYY-MM-DD, ambas inclusive. */
+export async function fetchTrmHistory(fromDate: string, toDate: string): Promise<TrmResult[]> {
+  const where = `vigenciadesde between '${fromDate}T00:00:00.000' and '${toDate}T00:00:00.000'`;
+  const url = `https://www.datos.gov.co/resource/32sa-8pi3.json?$where=${encodeURIComponent(where)}&$order=vigenciadesde&$limit=5000`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS * 3);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) return [];
+    const rows = (await res.json()) as unknown[];
+    return rows
+      .map((row) => parseTrmResponse([row]))
+      .filter((r): r is TrmResult => r != null);
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timeout);
+  }
+}

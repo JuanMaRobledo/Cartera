@@ -23,6 +23,9 @@ export default function FxRatesPage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshingTrm, setRefreshingTrm] = useState(false);
   const [trmMsg, setTrmMsg] = useState<string | null>(null);
+  const [backfillRange, setBackfillRange] = useState({ from: "", to: "" });
+  const [backfilling, setBackfilling] = useState(false);
+  const [backfillMsg, setBackfillMsg] = useState<string | null>(null);
 
   const load = () => {
     fetch("/api/fx-rates").then((r) => r.json()).then(setRates);
@@ -72,6 +75,28 @@ export default function FxRatesPage() {
     }
   };
 
+  const backfillTrm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBackfilling(true);
+    setBackfillMsg(null);
+    try {
+      const res = await fetch("/api/fx-rates/trm-backfill", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(backfillRange),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        setBackfillMsg(result.error ?? "No se pudo cargar el histórico de TRM.");
+        return;
+      }
+      setBackfillMsg(`Se cargaron ${result.upserted} fecha(s) de TRM para ${result.currencyCode}.`);
+      await load();
+    } finally {
+      setBackfilling(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -94,6 +119,42 @@ export default function FxRatesPage() {
           {trmMsg && <p className="mt-1 max-w-xs text-xs text-slate-600">{trmMsg}</p>}
         </div>
       </div>
+
+      <form onSubmit={backfillTrm} className="card grid grid-cols-1 gap-3 sm:grid-cols-4">
+        <div className="sm:col-span-4">
+          <h2 className="font-medium">Histórico de TRM</h2>
+          <p className="text-sm text-slate-500">
+            Para importar transacciones viejas en COP hace falta el tipo de cambio de esa época, no solo el de hoy.
+            Cargá acá un rango de fechas y trae la TRM oficial de cada día en que cambió, para todo ese período.
+          </p>
+        </div>
+        <div>
+          <label className="label">Desde</label>
+          <input
+            type="date"
+            className="input"
+            value={backfillRange.from}
+            onChange={(e) => setBackfillRange({ ...backfillRange, from: e.target.value })}
+            required
+          />
+        </div>
+        <div>
+          <label className="label">Hasta</label>
+          <input
+            type="date"
+            className="input"
+            value={backfillRange.to}
+            onChange={(e) => setBackfillRange({ ...backfillRange, to: e.target.value })}
+            required
+          />
+        </div>
+        <div className="flex items-end">
+          <button className="btn-secondary w-full" type="submit" disabled={backfilling}>
+            {backfilling ? "Cargando…" : "Cargar histórico de TRM"}
+          </button>
+        </div>
+        {backfillMsg && <p className="text-sm text-slate-600 sm:col-span-4">{backfillMsg}</p>}
+      </form>
 
       <form onSubmit={submit} className="card grid grid-cols-1 gap-3 sm:grid-cols-4">
         <div>
