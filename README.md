@@ -153,7 +153,11 @@ npm test        # tests del motor de cálculo (vitest)
    mercado de cada activo para ver la ganancia no realizada.
 8. **Panel**: ahí ves el valor total, el retorno total y su descomposición
    entre desempeño del activo y efecto cambiario, por posición y a nivel de
-   toda la cartera.
+   toda la cartera. El selector "Ver" arriba de la página cambia entre la
+   cartera completa (posiciones agrupadas por activo en todas las cuentas,
+   con un solo costo promedio ponderado) y una cuenta puntual (mismo activo
+   en dos brokers distintos, cada uno con su propio costo promedio) — útil
+   para comparar, por ejemplo, el mismo ticker comprado en IBKR y en Hapi.
 
 ## Importar desde un broker
 

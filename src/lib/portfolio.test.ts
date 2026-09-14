@@ -16,6 +16,7 @@ function asset(overrides: Partial<AssetInfo> = {}): AssetInfo {
 function tx(overrides: Partial<RawTransaction>): RawTransaction {
   return {
     id: Math.random().toString(36).slice(2),
+    accountId: "acc1",
     assetId: "a1",
     type: "BUY",
     date: new Date("2024-01-01"),

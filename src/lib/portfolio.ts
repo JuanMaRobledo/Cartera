@@ -19,6 +19,7 @@ import type { TransactionType } from "./enums";
 
 export interface RawTransaction {
   id: string;
+  accountId: string;
   assetId: string | null;
   type: TransactionType;
   date: Date;

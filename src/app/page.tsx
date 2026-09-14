@@ -51,21 +51,34 @@ interface PortfolioDto {
   summary: SummaryDto;
 }
 
+interface AccountDto {
+  id: string;
+  name: string;
+}
+
 export default function DashboardPage() {
   const [data, setData] = useState<PortfolioDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
+  const [accounts, setAccounts] = useState<AccountDto[]>([]);
+  const [accountId, setAccountId] = useState("");
 
-  const load = () =>
-    fetch("/api/portfolio")
+  const load = (scopeAccountId: string) =>
+    fetch(scopeAccountId ? `/api/portfolio?accountId=${scopeAccountId}` : "/api/portfolio")
       .then((r) => r.json())
       .then(setData)
       .catch(() => setError("No se pudo cargar la cartera."));
 
   useEffect(() => {
-    load();
+    fetch("/api/accounts")
+      .then((r) => r.json())
+      .then(setAccounts);
   }, []);
+
+  useEffect(() => {
+    load(accountId);
+  }, [accountId]);
 
   const refreshPrices = async () => {
     setRefreshing(true);
@@ -82,7 +95,7 @@ export default function DashboardPage() {
         `Se actualizaron ${updated.length} precio(s)` +
           (failed.length > 0 ? `; sin datos para ${failed.map((f) => f.ticker).join(", ")}` : "."),
       );
-      await load();
+      await load(accountId);
     } finally {
       setRefreshing(false);
     }
@@ -100,6 +113,23 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl font-semibold">Panel de cartera</h1>
           <p className="text-sm text-slate-500">Todo expresado en moneda base: {baseCurrency}</p>
+          <div className="mt-2">
+            <label className="label">Ver</label>
+            <select className="input" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+              <option value="">Cartera completa (todas las cuentas)</option>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  Solo {a.name}
+                </option>
+              ))}
+            </select>
+            {accountId && (
+              <p className="mt-1 text-xs text-slate-500">
+                Costo promedio y ganancias calculados solo con las operaciones de esta cuenta — una misma acción
+                comprada en varios brokers va a aparecer con un costo promedio distinto acá que en la vista completa.
+              </p>
+            )}
+          </div>
           {summary.positionsMissingPrice > 0 && (
             <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
               {summary.positionsMissingPrice} posición(es) sin precio actual cargado — no se incluyen en el valor de
