@@ -223,6 +223,59 @@ describe("computePositions - arrastre de coma flotante al cerrar", () => {
   });
 });
 
+describe("computePositions - retorno %", () => {
+  it("returnPct usa el capital total invertido, no el costo actual, para una posición cerrada", () => {
+    const assets = new Map([["a1", asset()]]);
+    const txs: RawTransaction[] = [
+      tx({ type: "BUY", date: new Date("2024-01-01"), quantity: 10, price: 100 }),
+      tx({ type: "SELL", date: new Date("2024-06-01"), quantity: 10, price: 120 }),
+    ];
+    const [p] = computePositions(txs, assets, new Map(), new Map());
+    expect(p.quantity).toBe(0); // cerrada: costBasisBase queda en 0
+    expect(p.totalInvestedBase).toBeCloseTo(1000, 6); // pero el capital invertido no se pierde
+    expect(p.totalReturnBase).toBeCloseTo(200, 6);
+    expect(p.returnPct).toBeCloseTo(0.2, 6);
+  });
+
+  it("returnPct es null si nunca se invirtió capital en el activo (p. ej. solo un dividendo cargado a mano)", () => {
+    const assets = new Map([["a1", asset()]]);
+    const [p] = computePositions([tx({ type: "DIVIDEND", amount: 50 })], assets, new Map(), new Map());
+    expect(p.totalInvestedBase).toBe(0);
+    expect(p.totalReturnBase).toBeCloseTo(50, 6);
+    expect(p.returnPct).toBeNull();
+  });
+});
+
+describe("computePortfolioSummary - retorno por moneda", () => {
+  it("agrupa el retorno local de cada moneda por separado, sin mezclar el efecto cambiario", () => {
+    const usdAsset = asset({ id: "a1", ticker: "AAPL", currencyCode: "USD" });
+    const copAsset = asset({ id: "a2", ticker: "ECOPETROL", currencyCode: "COP" });
+    const assets = new Map([
+      ["a1", usdAsset],
+      ["a2", copAsset],
+    ]);
+    const txs: RawTransaction[] = [
+      tx({ assetId: "a1", type: "BUY", currencyCode: "USD", fxRateToBase: 1, quantity: 10, price: 100 }),
+      tx({ assetId: "a2", type: "BUY", currencyCode: "COP", fxRateToBase: 0.00025, quantity: 1000, price: 1000 }),
+    ];
+    const quotes = new Map<string, LatestQuote>([
+      ["a1", { price: 110, date: new Date() }], // +10% en USD
+      ["a2", { price: 1200, date: new Date() }], // +20% en COP
+    ]);
+    const fx = new Map([
+      ["USD", 1],
+      ["COP", 0.00025],
+    ]);
+    const positions = computePositions(txs, assets, quotes, fx);
+    const summary = computePortfolioSummary(positions, []);
+
+    const usd = summary.returnByCurrency.find((c) => c.currencyCode === "USD")!;
+    const cop = summary.returnByCurrency.find((c) => c.currencyCode === "COP")!;
+    expect(usd.returnPct).toBeCloseTo(0.1, 6);
+    expect(cop.returnPct).toBeCloseTo(0.2, 6);
+  });
+});
+
 describe("dividendos y comisiones", () => {
   it("suma dividendos netos de comisión/retención al total return", () => {
     const assets = new Map([["a1", asset()]]);

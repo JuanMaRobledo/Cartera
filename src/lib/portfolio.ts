@@ -94,11 +94,23 @@ export interface AssetPosition {
 
   dividendsLocal: number;
   dividendsBase: number;
+  feesLocal: number;
   feesBase: number;
 
+  // Capital total puesto en este activo alguna vez (suma de todo lo que se
+  // agregó al costo al comprar/abrir, sin restar al cerrar) — a diferencia
+  // de costBasisLocal/Base (que baja a 0 al liquidar), esto no se pierde al
+  // vender, así que sirve de denominador para el retorno % tanto de
+  // posiciones abiertas como cerradas.
+  totalInvestedLocal: number;
+  totalInvestedBase: number;
+
+  totalReturnLocal: number;
   totalReturnBase: number;
   totalReturnLocalPerformanceBase: number;
   totalReturnFxEffectBase: number;
+  /** totalReturnBase / totalInvestedBase, o null si nunca se invirtió nada (p. ej. solo dividendos). */
+  returnPct: number | null;
 
   lots: RealizedLot[];
 }
@@ -130,10 +142,15 @@ function emptyPosition(asset: AssetInfo): AssetPosition {
     realizedFxEffectBase: 0,
     dividendsLocal: 0,
     dividendsBase: 0,
+    feesLocal: 0,
     feesBase: 0,
+    totalInvestedLocal: 0,
+    totalInvestedBase: 0,
+    totalReturnLocal: 0,
     totalReturnBase: 0,
     totalReturnLocalPerformanceBase: 0,
     totalReturnFxEffectBase: 0,
+    returnPct: null,
     lots: [],
   };
 }
@@ -246,6 +263,8 @@ export function computePositions(
           position.quantity += dirTrade * openingQty;
           position.costBasisLocal += addedBasisLocal;
           position.costBasisBase += addedBasisLocal * tx.fxRateToBase;
+          position.totalInvestedLocal += addedBasisLocal;
+          position.totalInvestedBase += addedBasisLocal * tx.fxRateToBase;
         }
 
         if (Math.abs(position.quantity) <= 1e-9) {
@@ -264,6 +283,7 @@ export function computePositions(
         position.dividendsBase += dividendLocal * tx.fxRateToBase;
       } else if (tx.type === "FEE") {
         const feeLocal = tx.amount ?? commission;
+        position.feesLocal += feeLocal;
         position.feesBase += feeLocal * tx.fxRateToBase;
       }
     }
@@ -285,6 +305,8 @@ export function computePositions(
       position.unrealizedFxEffectBase = position.unrealizedPnLBase - position.unrealizedLocalPerformanceBase;
     }
 
+    position.totalReturnLocal =
+      position.realizedPnLLocal + (position.unrealizedPnLLocal ?? 0) + position.dividendsLocal - position.feesLocal;
     position.totalReturnBase =
       position.realizedPnLBase + (position.unrealizedPnLBase ?? 0) + position.dividendsBase - position.feesBase;
     position.totalReturnLocalPerformanceBase =
@@ -293,6 +315,7 @@ export function computePositions(
       position.dividendsBase -
       position.feesBase;
     position.totalReturnFxEffectBase = position.realizedFxEffectBase + (position.unrealizedFxEffectBase ?? 0);
+    position.returnPct = position.totalInvestedBase > 0 ? position.totalReturnBase / position.totalInvestedBase : null;
 
     positions.set(assetId, position);
   }
@@ -351,9 +374,18 @@ export function computeCashBalances(
     .sort((a, b) => a.currencyCode.localeCompare(b.currencyCode));
 }
 
+export interface CurrencyReturn {
+  currencyCode: string;
+  totalInvestedLocal: number;
+  totalReturnLocal: number;
+  /** totalReturnLocal / totalInvestedLocal: cuánto rindieron en su propia moneda los activos de esta moneda, sin efecto cambiario. */
+  returnPct: number | null;
+}
+
 export interface PortfolioSummary {
   totalMarketValueBase: number;
   totalCostBase: number;
+  totalInvestedBase: number;
   totalUnrealizedBase: number;
   totalRealizedBase: number;
   totalDividendsBase: number;
@@ -362,12 +394,17 @@ export interface PortfolioSummary {
   totalReturnBase: number;
   totalReturnLocalPerformanceBase: number;
   totalReturnFxEffectBase: number;
+  /** totalReturnBase / totalInvestedBase: retorno % de toda la cartera en moneda base. */
+  totalReturnPct: number | null;
+  /** Retorno % en su propia moneda de cada grupo de activos (p. ej. USD, COP), sin efecto cambiario. */
+  returnByCurrency: CurrencyReturn[];
   positionsMissingPrice: number;
 }
 
 export function computePortfolioSummary(positions: AssetPosition[], cashBalances: CashBalance[]): PortfolioSummary {
   let totalMarketValueBase = 0;
   let totalCostBase = 0;
+  let totalInvestedBase = 0;
   let totalUnrealizedBase = 0;
   let totalRealizedBase = 0;
   let totalDividendsBase = 0;
@@ -377,10 +414,13 @@ export function computePortfolioSummary(positions: AssetPosition[], cashBalances
   let totalReturnFxEffectBase = 0;
   let positionsMissingPrice = 0;
 
+  const byCurrency = new Map<string, { totalInvestedLocal: number; totalReturnLocal: number }>();
+
   for (const p of positions) {
     if (p.quantity !== 0 && p.marketValueBase == null) positionsMissingPrice += 1;
     totalMarketValueBase += p.marketValueBase ?? 0;
     totalCostBase += p.costBasisBase;
+    totalInvestedBase += p.totalInvestedBase;
     totalUnrealizedBase += p.unrealizedPnLBase ?? 0;
     totalRealizedBase += p.realizedPnLBase;
     totalDividendsBase += p.dividendsBase;
@@ -388,13 +428,28 @@ export function computePortfolioSummary(positions: AssetPosition[], cashBalances
     totalReturnBase += p.totalReturnBase;
     totalReturnLocalPerformanceBase += p.totalReturnLocalPerformanceBase;
     totalReturnFxEffectBase += p.totalReturnFxEffectBase;
+
+    const entry = byCurrency.get(p.currencyCode) ?? { totalInvestedLocal: 0, totalReturnLocal: 0 };
+    entry.totalInvestedLocal += p.totalInvestedLocal;
+    entry.totalReturnLocal += p.totalReturnLocal;
+    byCurrency.set(p.currencyCode, entry);
   }
 
   const totalCashBase = cashBalances.reduce((sum, c) => sum + (c.balanceBase ?? 0), 0);
 
+  const returnByCurrency: CurrencyReturn[] = [...byCurrency.entries()]
+    .map(([currencyCode, { totalInvestedLocal, totalReturnLocal }]) => ({
+      currencyCode,
+      totalInvestedLocal,
+      totalReturnLocal,
+      returnPct: totalInvestedLocal > 0 ? totalReturnLocal / totalInvestedLocal : null,
+    }))
+    .sort((a, b) => a.currencyCode.localeCompare(b.currencyCode));
+
   return {
     totalMarketValueBase,
     totalCostBase,
+    totalInvestedBase,
     totalUnrealizedBase,
     totalRealizedBase,
     totalDividendsBase,
@@ -403,6 +458,8 @@ export function computePortfolioSummary(positions: AssetPosition[], cashBalances
     totalReturnBase,
     totalReturnLocalPerformanceBase,
     totalReturnFxEffectBase,
+    totalReturnPct: totalInvestedBase > 0 ? totalReturnBase / totalInvestedBase : null,
+    returnByCurrency,
     positionsMissingPrice,
   };
 }
