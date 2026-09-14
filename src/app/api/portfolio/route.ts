@@ -8,10 +8,11 @@ import {
 } from "@/lib/data";
 import { computeCashBalances, computePortfolioSummary, computePositions } from "@/lib/portfolio";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const accountId = new URL(request.url).searchParams.get("accountId") ?? undefined;
   const [baseCurrency, transactions, assets, quotes, fxRates] = await Promise.all([
     getBaseCurrency(),
-    getRawTransactions(),
+    getRawTransactions(accountId),
     getAssetsMap(),
     getLatestQuotes(),
     getLatestFxRates(),

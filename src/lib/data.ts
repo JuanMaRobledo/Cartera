@@ -55,10 +55,14 @@ export async function getAssetsMap(): Promise<Map<string, AssetInfo>> {
   );
 }
 
-export async function getRawTransactions(): Promise<RawTransaction[]> {
-  const txs = await prisma.transaction.findMany({ orderBy: { date: "asc" } });
+export async function getRawTransactions(accountId?: string): Promise<RawTransaction[]> {
+  const txs = await prisma.transaction.findMany({
+    where: accountId ? { accountId } : undefined,
+    orderBy: { date: "asc" },
+  });
   return txs.map((t) => ({
     id: t.id,
+    accountId: t.accountId,
     assetId: t.assetId,
     type: t.type as RawTransaction["type"],
     date: t.date,
