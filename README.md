@@ -94,9 +94,10 @@ movimiento del tipo de cambio.
   "Transacciones" tiene un link "Editar" que abre el mismo formulario de alta
   precargado con los valores existentes (comisión incluida) y guarda los
   cambios con `PATCH /api/transactions/:id`.
-- **Contraseña de acceso**: toda la app (páginas y API, salvo `/api/cron/*`
-  que usa su propio `CRON_SECRET`) queda detrás de una contraseña única
-  definida en la variable de entorno `APP_PASSWORD`. Sin esa variable
+- **Usuario y contraseña de acceso**: toda la app (páginas y API, salvo
+  `/api/cron/*` que usa su propio `CRON_SECRET`) queda detrás de las
+  credenciales definidas en `APP_USERNAME` y `APP_PASSWORD`. Si no se define
+  `APP_USERNAME`, se usa `JuanMaRobledo`. Sin `APP_PASSWORD`
   configurada la app queda abierta (para no exigir setup en desarrollo
   local); en producción hay que definirla en Vercel para que esto proteja
   algo — ver la sección de despliegue más abajo. El gatekeeper vive en
@@ -139,6 +140,8 @@ fijo:
    - `CRON_SECRET` con cualquier contraseña larga que inventes (protege el
      endpoint de actualización automática diaria para que no lo pueda llamar
      cualquiera desde internet).
+   - `APP_USERNAME` con el usuario que vas a usar para entrar (si se omite,
+     será `JuanMaRobledo`).
    - `APP_PASSWORD` con la contraseña que vas a usar para entrar a la app —
      **sin esta variable la app queda públicamente accesible para cualquiera
      que tenga la URL**, sin login de ningún tipo.
