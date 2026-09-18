@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -18,7 +19,7 @@ function LoginForm() {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ username, password }),
       });
       if (!res.ok) {
         setError((await res.json()).error ?? "Error al iniciar sesión");
@@ -35,13 +36,30 @@ function LoginForm() {
   return (
     <form onSubmit={submit} className="card space-y-4">
       <div>
-        <label className="label">Contraseña</label>
+        <label className="label" htmlFor="username">Usuario</label>
         <input
+          id="username"
+          name="username"
+          type="text"
+          className="input"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          autoComplete="username"
+          autoCapitalize="none"
+          autoFocus
+          required
+        />
+      </div>
+      <div>
+        <label className="label" htmlFor="password">Contraseña</label>
+        <input
+          id="password"
+          name="password"
           type="password"
           className="input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          autoFocus
+          autoComplete="current-password"
           required
         />
       </div>
