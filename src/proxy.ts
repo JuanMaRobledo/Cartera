@@ -3,9 +3,9 @@ import type { NextRequest } from "next/server";
 import { SESSION_COOKIE, isValidSession } from "@/lib/auth";
 
 /**
- * Gatekeeper único: sin APP_PASSWORD configurada la app queda abierta (útil
- * en desarrollo local); en producción hay que definir esa variable en Vercel
- * para que esto proteja algo. /api/cron queda afuera porque esa ruta ya
+ * Gatekeeper único: sin APP_PASSWORD configurada la app queda abierta para
+ * desarrollo local. En producción, APP_USERNAME (o JuanMaRobledo por defecto)
+ * y APP_PASSWORD protegen toda la app. /api/cron queda afuera porque esa ruta
  * valida su propio CRON_SECRET (Vercel la llama sin la cookie de sesión).
  */
 export function proxy(request: NextRequest) {
