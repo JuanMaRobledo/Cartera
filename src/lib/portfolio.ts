@@ -390,7 +390,10 @@ export interface PortfolioSummary {
   totalRealizedBase: number;
   totalDividendsBase: number;
   totalFeesBase: number;
+  /** Efectivo disponible. Los saldos negativos se presentan aparte como deuda. */
   totalCashBase: number;
+  /** Obligaciones de efectivo (margen/deuda), expresadas como importe positivo. */
+  totalDebtBase: number;
   totalReturnBase: number;
   totalReturnLocalPerformanceBase: number;
   totalReturnFxEffectBase: number;
@@ -435,7 +438,18 @@ export function computePortfolioSummary(positions: AssetPosition[], cashBalances
     byCurrency.set(p.currencyCode, entry);
   }
 
-  const totalCashBase = cashBalances.reduce((sum, c) => sum + (c.balanceBase ?? 0), 0);
+  // Un saldo negativo no es "efectivo negativo" ni parte del precio de
+  // coste de los activos: es una obligación financiera. Separamos ambos
+  // conceptos para que la interfaz muestre la deuda explícitamente y la
+  // reste una sola vez al calcular el patrimonio neto.
+  const totalCashBase = cashBalances.reduce(
+    (sum, c) => sum + Math.max(c.balanceBase ?? 0, 0),
+    0,
+  );
+  const totalDebtBase = cashBalances.reduce(
+    (sum, c) => sum + Math.max(-(c.balanceBase ?? 0), 0),
+    0,
+  );
 
   const returnByCurrency: CurrencyReturn[] = [...byCurrency.entries()]
     .map(([currencyCode, { totalInvestedLocal, totalReturnLocal }]) => ({
@@ -455,6 +469,7 @@ export function computePortfolioSummary(positions: AssetPosition[], cashBalances
     totalDividendsBase,
     totalFeesBase,
     totalCashBase,
+    totalDebtBase,
     totalReturnBase,
     totalReturnLocalPerformanceBase,
     totalReturnFxEffectBase,
