@@ -327,7 +327,28 @@ describe("computePortfolioSummary", () => {
     const summary = computePortfolioSummary(positions, cash);
     expect(summary.totalMarketValueBase).toBeCloseTo(1300, 6);
     expect(summary.totalCashBase).toBeCloseTo(200, 6);
+    expect(summary.totalDebtBase).toBe(0);
     expect(summary.positionsMissingPrice).toBe(0);
+  });
+
+  it("separa la deuda del efectivo y no la incorpora al precio de coste", () => {
+    const assets = new Map([["a1", asset()]]);
+    const positions = computePositions(
+      [tx({ type: "BUY", quantity: 10, price: 100 })],
+      assets,
+      new Map([["a1", { price: 120, date: new Date() }]]),
+      new Map([["USD", 1]]),
+    );
+    const cash = computeCashBalances(
+      [tx({ assetId: null, type: "WITHDRAWAL", amount: 300 })],
+      new Map([["USD", 1]]),
+    );
+
+    const summary = computePortfolioSummary(positions, cash);
+
+    expect(summary.totalCashBase).toBe(0);
+    expect(summary.totalDebtBase).toBeCloseTo(300, 6);
+    expect(summary.totalCostBase).toBeCloseTo(1000, 6);
   });
 });
 
