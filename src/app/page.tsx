@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { InstallAppCard } from "@/components/InstallAppCard";
 
 const apps = [
   {
@@ -50,6 +51,8 @@ export default function AppsHomePage() {
           </p>
         </div>
       </section>
+
+      <InstallAppCard />
 
       <section aria-labelledby="apps-title">
         <div className="mb-5 flex items-end justify-between gap-4">
