@@ -104,6 +104,12 @@ movimiento del tipo de cambio.
   `src/proxy.ts` (Proxy/Middleware de Next.js) y la sesión es una cookie
   `HttpOnly` con el hash de la contraseña, nunca la contraseña en texto
   plano.
+- **Aplicación instalable (PWA)**: desde la portada se puede instalar JMR en
+  Android, iPhone, iPad y computadores compatibles. Al abrirla desde la
+  pantalla de inicio funciona en modo independiente, conserva el acceso con
+  usuario y contraseña y muestra una pantalla neutra cuando no hay conexión.
+  Por seguridad, el service worker no guarda las páginas autenticadas ni las
+  respuestas de la API con información financiera.
 
 El motor de cálculo está en `src/lib/portfolio.ts` y tiene tests unitarios en
 `src/lib/portfolio.test.ts` que documentan y verifican la lógica (costo
@@ -161,6 +167,14 @@ fijo:
 
 Los datos quedan en Neon (en la nube), así que persisten entre despliegues y
 accedés desde cualquier dispositivo con esa URL.
+
+## Instalar en el celular
+
+- **Android (Chrome)**: inicia sesión, abre la portada y pulsa **Instalar app**.
+  Si el botón del navegador no aparece todavía, usa el menú de Chrome y elige
+  **Instalar aplicación** o **Añadir a pantalla principal**.
+- **iPhone o iPad (Safari)**: inicia sesión, abre la portada, toca **Compartir**
+  y selecciona **Añadir a pantalla de inicio**.
 
 ## Correrla en tu computadora
 
