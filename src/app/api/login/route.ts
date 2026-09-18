@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
-import { SESSION_COOKIE, expectedSessionToken } from "@/lib/auth";
+import { areValidCredentials, SESSION_COOKIE, expectedSessionToken } from "@/lib/auth";
 
 export async function POST(request: Request) {
-  const { password } = await request.json();
-  const appPassword = process.env.APP_PASSWORD;
-  if (!appPassword || password !== appPassword) {
-    return NextResponse.json({ error: "Contraseña incorrecta" }, { status: 401 });
+  const { username, password } = (await request.json()) as {
+    username?: unknown;
+    password?: unknown;
+  };
+
+  if (
+    typeof username !== "string" ||
+    typeof password !== "string" ||
+    !areValidCredentials(username, password)
+  ) {
+    return NextResponse.json({ error: "Usuario o contraseña incorrectos" }, { status: 401 });
   }
 
   const token = expectedSessionToken();
