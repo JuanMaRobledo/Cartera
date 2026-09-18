@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#020617" />
+    <title>JMR · Sin conexión</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; background: #f8fafc; color: #0f172a; font-family: Arial, sans-serif; }
+      main { width: min(100%, 420px); padding: 32px; border: 1px solid #e2e8f0; border-radius: 24px; background: white; box-shadow: 0 20px 50px rgba(15, 23, 42, .08); }
+      .mark { display: grid; width: 56px; height: 56px; place-items: center; border-radius: 18px; margin-bottom: 24px; background: #020617; color: white; font-weight: 700; letter-spacing: .08em; }
+      h1 { margin: 0 0 12px; font-size: 24px; }
+      p { margin: 0; color: #475569; line-height: 1.6; }
+      button { width: 100%; margin-top: 24px; padding: 12px 16px; border: 0; border-radius: 12px; background: #020617; color: white; font: inherit; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="mark">JMR</div>
+      <h1>Sin conexión</h1>
+      <p>Conéctate a internet para consultar los datos actualizados de tu cartera.</p>
+      <button type="button" onclick="window.location.reload()">Intentar de nuevo</button>
+    </main>
+  </body>
+</html>
