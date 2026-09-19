@@ -11,7 +11,7 @@ dispersar la experiencia del usuario.
 |---|---|---|
 | Centro financiero y seguimiento de cartera | [`Cartera`](https://github.com/JuanMaRobledo/Cartera) | Vercel |
 | Valoración y análisis fundamental | [`Modelo-JMR`](https://modelo-jmr.vercel.app) | Vercel protegido |
-| Presupuesto personal | [`presupuesto-app-web`](https://github.com/JuanMaRobledo/presupuesto-app-web) | GitHub Pages |
+| Presupuesto personal | [`presupuesto-app-web`](https://github.com/JuanMaRobledo/presupuesto-app-web) | Vercel protegido |
 
 ## Repositorios de apoyo
 
