@@ -6,7 +6,7 @@ const SHELL_ASSETS = [
   "/icons/icon-512.png",
   "/icons/icon-maskable-512.png",
   "/icons/apple-touch-icon.png",
-  "/jmr-roble-foso-aprobado.png?v=1",
+  "/jmr-roble-foso-mobile.png?v=1",
 ];
 
 self.addEventListener("install", (event) => {
