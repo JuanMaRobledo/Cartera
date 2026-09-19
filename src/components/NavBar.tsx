@@ -32,7 +32,7 @@ export function NavBar() {
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-7xl items-center gap-4 overflow-x-auto px-4 py-3">
         <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="Centro financiero JMR">
-          <img src="/jmr-roble-foso-aprobado.png?v=1" alt="JMR" width={40} height={40} className="h-9 w-9 object-contain" />
+          <img src="/jmr-roble-foso-mobile.png?v=1" alt="JMR" width={40} height={40} className="h-9 w-9 object-contain" />
           <span className="hidden text-sm font-semibold text-slate-900 sm:block">Centro financiero</span>
         </Link>
         <nav className="flex shrink-0 gap-1">
