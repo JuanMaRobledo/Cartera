@@ -50,7 +50,7 @@ export default function AppsHomePage() {
           </div>
           <div className="flex shrink-0 justify-center sm:justify-end">
             <img
-              src="/jmr-roble-foso.png?v=3"
+              src="/jmr-roble-foso.svg?v=1"
               alt="JMR · El Roble en el Foso"
               className="h-44 w-44 object-contain drop-shadow-2xl sm:h-52 sm:w-52"
             />
