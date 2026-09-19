@@ -51,7 +51,7 @@ export default function AppsHomePage() {
           </div>
           <div className="flex shrink-0 justify-center sm:justify-end">
             <Image
-              src="/jmr-roble-foso.png"
+              src="/jmr-roble-foso.png?v=3"
               alt="JMR · El Roble en el Foso"
               width={220}
               height={220}
