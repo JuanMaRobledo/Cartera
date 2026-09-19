@@ -33,7 +33,7 @@ export function NavBar() {
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-7xl items-center gap-4 overflow-x-auto px-4 py-3">
         <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="Centro financiero JMR">
-          <Image src="/jmr-roble-foso.png" alt="JMR" width={40} height={40} className="h-9 w-9 object-contain" />
+          <Image src="/jmr-roble-foso.png?v=3" alt="JMR" width={40} height={40} className="h-9 w-9 object-contain" />
           <span className="hidden text-sm font-semibold text-slate-900 sm:block">Centro financiero</span>
         </Link>
         <nav className="flex shrink-0 gap-1">
@@ -46,9 +46,7 @@ export function NavBar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-                  active ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
-                }`}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium ${active ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"}`}
               >
                 {link.label}
               </Link>
