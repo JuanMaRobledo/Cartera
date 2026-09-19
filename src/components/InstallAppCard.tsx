@@ -57,8 +57,8 @@ export function InstallAppCard() {
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Aplicación móvil</p>
         <h2 className="mt-1 text-lg font-semibold text-slate-950">Instala JMR en tu celular</h2>
-        <p className="mt-1 text-sm leading-6 text-slate-600">
-          Ábrela desde la pantalla de inicio, a pantalla completa y con el mismo acceso protegido.
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+          Instálala en el celular o computador para abrirla como una aplicación independiente, con el mismo acceso protegido.
         </p>
         {showHelp && (
           <p className="mt-3 rounded-xl bg-white px-4 py-3 text-sm leading-6 text-slate-700 ring-1 ring-sky-100">
