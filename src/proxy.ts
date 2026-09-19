@@ -4,7 +4,7 @@ import { SESSION_COOKIE, isValidSession } from "@/lib/auth";
 
 /**
  * Gatekeeper único: sin APP_PASSWORD configurada la app queda abierta para
- * desarrollo local. En producción, APP_USERNAME (o JuanMaRobledo por defecto)
+ * desarrollo local. En producción, APP_USERNAME (o juan0804 por defecto)
  * y APP_PASSWORD protegen toda la app. /api/cron queda afuera porque esa ruta
  * valida su propio CRON_SECRET (Vercel la llama sin la cookie de sesión).
  */

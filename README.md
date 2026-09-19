@@ -101,7 +101,7 @@ movimiento del tipo de cambio.
 - **Usuario y contraseña de acceso**: toda la app (páginas y API, salvo
   `/api/cron/*` que usa su propio `CRON_SECRET`) queda detrás de las
   credenciales definidas en `APP_USERNAME` y `APP_PASSWORD`. Si no se define
-  `APP_USERNAME`, se usa `JuanMaRobledo`. Sin `APP_PASSWORD`
+  `APP_USERNAME`, se usa `juan0804`. Sin `APP_PASSWORD`
   configurada la app queda abierta (para no exigir setup en desarrollo
   local); en producción hay que definirla en Vercel para que esto proteja
   algo — ver la sección de despliegue más abajo. El gatekeeper vive en

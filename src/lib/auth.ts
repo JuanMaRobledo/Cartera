@@ -1,7 +1,7 @@
 import { createHash, timingSafeEqual } from "crypto";
 
 export const SESSION_COOKIE = "cartera_session";
-export const DEFAULT_APP_USERNAME = "JuanMaRobledo";
+export const DEFAULT_APP_USERNAME = "juan0804";
 
 export function expectedUsername(): string {
   return process.env.APP_USERNAME?.trim() || DEFAULT_APP_USERNAME;
@@ -25,7 +25,7 @@ export function areValidCredentials(username: string, password: string): boolean
  * guarda en texto plano en la cookie). Sin APP_PASSWORD configurada la app
  * queda abierta para facilitar el desarrollo local; en producción esa variable
  * debe existir. APP_USERNAME puede personalizar el usuario y, si se omite,
- * conserva el usuario inicial JuanMaRobledo.
+ * conserva el usuario personal juan0804.
  */
 export function expectedSessionToken(): string | null {
   const password = process.env.APP_PASSWORD;
