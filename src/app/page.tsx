@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { InstallAppCard } from "@/components/InstallAppCard";
 
 const apps = [
@@ -50,12 +49,9 @@ export default function AppsHomePage() {
             </p>
           </div>
           <div className="flex shrink-0 justify-center sm:justify-end">
-            <Image
+            <img
               src="/jmr-roble-foso.png?v=3"
               alt="JMR · El Roble en el Foso"
-              width={220}
-              height={220}
-              priority
               className="h-44 w-44 object-contain drop-shadow-2xl sm:h-52 sm:w-52"
             />
           </div>
