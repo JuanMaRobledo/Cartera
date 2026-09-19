@@ -25,7 +25,7 @@ const apps = [
   {
     name: "Presupuesto personal",
     description: "Presupuesto, cuentas, tarjetas, deudas, flujo de caja y patrimonio personal.",
-    href: "https://juanmarobledo.github.io/presupuesto-app-web/",
+    href: "https://presupuesto-app-web.vercel.app",
     action: "Abrir presupuesto",
     eyebrow: "Finanzas personales",
     accent: "from-emerald-500 to-teal-600",
