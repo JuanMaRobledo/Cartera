@@ -79,6 +79,8 @@ export default function DashboardPage() {
   const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
   const [accountId, setAccountId] = useState("");
+  const [assetTypeFilter, setAssetTypeFilter] = useState("ALL");
+  const [searchFilter, setSearchFilter] = useState("");
 
   const load = (scopeAccountId: string) =>
     fetch(scopeAccountId ? `/api/portfolio?accountId=${scopeAccountId}` : "/api/portfolio")
@@ -238,8 +240,29 @@ export default function DashboardPage() {
 
   const { summary, positions, cashBalances, baseCurrency } = data;
   const netWorth = summary.totalMarketValueBase + summary.totalCashBase - summary.totalDebtBase;
-  const openPositions = positions.filter((p) => p.quantity !== 0);
+  const openPositions = positions.filter((p) => {
+    if (p.quantity === 0) return false;
+    if (assetTypeFilter !== "ALL" && p.assetType !== assetTypeFilter) return false;
+    if (searchFilter.trim()) {
+      const query = searchFilter.trim().toLowerCase();
+      if (!`${p.ticker} ${p.name}`.toLowerCase().includes(query)) return false;
+    }
+    return true;
+  });
   const closedPositions = positions.filter((p) => p.quantity === 0);
+
+  const exportCsv = () => {
+    const headers = ["Ticker", "Nombre", "Tipo", "Moneda", "Cantidad", "Precio actual", "Valor mercado", "Retorno", "Retorno %"];
+    const rows = openPositions.map((p) => [p.ticker, p.name, p.assetType, p.currencyCode, p.quantity, p.currentPriceLocal ?? "", p.marketValueBase ?? "", p.totalReturnBase, p.returnPct ?? ""]);
+    const csv = [headers, ...rows].map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `cartera-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const allocationByType = Object.entries(
     openPositions.reduce<Record<string, number>>((acc, p) => {
@@ -280,9 +303,12 @@ export default function DashboardPage() {
           )}
         </div>
         <div className="text-right">
-          <button className="btn-secondary" onClick={refreshPrices} disabled={refreshing}>
-            {refreshing ? "Actualizando…" : "Actualizar precios"}
-          </button>
+          <div className="flex flex-wrap justify-end gap-2">
+            <button className="btn-secondary" onClick={exportCsv} disabled={openPositions.length === 0}>Exportar CSV</button>
+            <button className="btn-secondary" onClick={refreshPrices} disabled={refreshing}>
+              {refreshing ? "Actualizando…" : "Actualizar precios"}
+            </button>
+          </div>
           {refreshMsg && <p className="mt-1 max-w-xs text-xs text-slate-500">{refreshMsg}</p>}
         </div>
       </div>
@@ -382,9 +408,16 @@ export default function DashboardPage() {
       </div>
 
       <div className="card overflow-x-auto">
-        <div className="mb-3 flex items-center justify-between gap-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-medium">Posiciones abiertas</h2>
-          <ColumnPicker columns={columns} visible={visibleColumns} onToggle={toggleColumn} />
+          <div className="flex flex-wrap gap-2">
+            <input className="input w-44" placeholder="Buscar activo…" value={searchFilter} onChange={(e) => setSearchFilter(e.target.value)} aria-label="Buscar activo" />
+            <select className="input w-auto" value={assetTypeFilter} onChange={(e) => setAssetTypeFilter(e.target.value)} aria-label="Filtrar por tipo">
+              <option value="ALL">Todos los tipos</option>
+              {Object.entries(ASSET_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+            <ColumnPicker columns={columns} visible={visibleColumns} onToggle={toggleColumn} />
+          </div>
         </div>
         {openPositions.length === 0 ? (
           <p className="text-sm text-slate-500">Todavía no tenés posiciones abiertas.</p>
