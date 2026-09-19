@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { InstallAppCard } from "@/components/InstallAppCard";
 
 const apps = [
@@ -25,7 +26,7 @@ const apps = [
   {
     name: "Presupuesto personal",
     description: "Presupuesto, cuentas, tarjetas, deudas, flujo de caja y patrimonio personal.",
-    href: "https://presupuesto-app-web.vercel.app",
+    href: "https://juanmarobledo.github.io/presupuesto-app-web/",
     action: "Abrir presupuesto",
     eyebrow: "Finanzas personales",
     accent: "from-emerald-500 to-teal-600",
@@ -40,15 +41,24 @@ export default function AppsHomePage() {
       <section className="relative overflow-hidden rounded-3xl bg-slate-950 px-6 py-10 text-white shadow-xl sm:px-10 sm:py-14">
         <div className="absolute -right-20 -top-28 h-72 w-72 rounded-full bg-sky-500/20 blur-3xl" />
         <div className="absolute -bottom-32 left-1/3 h-64 w-64 rounded-full bg-indigo-500/20 blur-3xl" />
-        <div className="relative max-w-3xl">
-          <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-sm font-bold tracking-wider ring-1 ring-white/20">
-            JMR
+        <div className="relative flex flex-col gap-8 sm:flex-row sm:items-center sm:justify-between">
+          <div className="max-w-3xl">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-sky-300">Centro de aplicaciones</p>
+            <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl">Todo tu ecosistema financiero, desde un solo lugar.</h1>
+            <p className="mt-5 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
+              Selecciona la herramienta que necesitas. Cada aplicación conserva sus propios datos y funciones.
+            </p>
           </div>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-sky-300">Centro de aplicaciones</p>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl">Todo tu ecosistema financiero, desde un solo lugar.</h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
-            Selecciona la herramienta que necesitas. Cada aplicación conserva sus propios datos y funciones.
-          </p>
+          <div className="flex shrink-0 justify-center sm:justify-end">
+            <Image
+              src="/jmr-roble-foso.png"
+              alt="JMR · El Roble en el Foso"
+              width={220}
+              height={220}
+              priority
+              className="h-44 w-44 object-contain drop-shadow-2xl sm:h-52 sm:w-52"
+            />
+          </div>
         </div>
       </section>
 
