@@ -34,6 +34,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PwaRegistration />
         <NavBar />
         <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
+        <footer className="mx-auto max-w-6xl px-4 pb-8 pt-4 text-center text-xs text-slate-500">
+          JMR · Centro financiero
+        </footer>
       </body>
     </html>
   );

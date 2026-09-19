@@ -1,5 +1,9 @@
 # Cartera
 
+> Repositorio principal de **JMR · Centro financiero**. Su portada reúne
+> Cartera, Modelo JMR y Presupuesto personal. Consulta el
+> [mapa de repositorios](ECOSISTEMA.md).
+
 Aplicación web para el seguimiento de una cartera de inversiones personal con
 posiciones en **múltiples monedas**, que calcula la **rentabilidad real**
 separando cuánto de la ganancia viene del desempeño del activo y cuánto del

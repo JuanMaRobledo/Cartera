@@ -30,7 +30,12 @@ export function NavBar() {
   return (
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-7xl items-center gap-4 overflow-x-auto px-4 py-3">
-        <span className="shrink-0 text-lg font-semibold">JMR</span>
+        <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="Centro financiero JMR">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-slate-950 text-[11px] font-bold tracking-wider text-white">
+            JMR
+          </span>
+          <span className="hidden text-sm font-semibold text-slate-900 sm:block">Centro financiero</span>
+        </Link>
         <nav className="flex shrink-0 gap-1">
           {links.map((link) => {
             const active = pathname === link.href;
