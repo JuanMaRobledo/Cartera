@@ -49,3 +49,11 @@ body {
 .loss-text {
   @apply text-loss;
 }
+
+@media print {
+  body { background: white !important; }
+  header, footer, button, select, input, nav, .print\:hidden { display: none !important; }
+  main { max-width: none !important; padding: 0 !important; }
+  .card, .stat-card { break-inside: avoid; box-shadow: none !important; }
+  table { font-size: 9pt; }
+}
