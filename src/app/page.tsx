@@ -15,7 +15,7 @@ const apps = [
   {
     name: "Modelo JMR",
     description: "Bitácora de valoración, visor cuantitativo, research fundamental y portafolio unificado.",
-    href: "https://juanmarobledo.github.io/Modelo-JMR/",
+    href: "https://modelo-jmr.vercel.app",
     action: "Abrir Modelo JMR",
     eyebrow: "Valoración",
     accent: "from-indigo-500 to-violet-600",
