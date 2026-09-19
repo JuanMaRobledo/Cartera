@@ -305,6 +305,7 @@ export default function DashboardPage() {
         <div className="text-right">
           <div className="flex flex-wrap justify-end gap-2">
             <button className="btn-secondary" onClick={exportCsv} disabled={openPositions.length === 0}>Exportar CSV</button>
+            <button className="btn-secondary print:hidden" onClick={() => window.print()}>Guardar PDF</button>
             <button className="btn-secondary" onClick={refreshPrices} disabled={refreshing}>
               {refreshing ? "Actualizando…" : "Actualizar precios"}
             </button>
