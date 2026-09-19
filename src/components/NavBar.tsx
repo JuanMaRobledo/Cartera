@@ -29,13 +29,13 @@ export function NavBar() {
   };
 
   return (
-    <header className="border-b border-slate-200 bg-white">
+    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center gap-4 overflow-x-auto px-4 py-3">
         <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="Centro financiero JMR">
           <img src="/jmr-roble-foso-mobile.png?v=1" alt="JMR" width={40} height={40} className="h-9 w-9 object-contain" />
           <span className="hidden text-sm font-semibold text-slate-900 sm:block">Centro financiero</span>
         </Link>
-        <nav className="flex shrink-0 gap-1">
+        <nav aria-label="Navegación principal" className="flex min-w-0 shrink-0 gap-1">
           <Link href="/" className={`rounded-md px-3 py-1.5 text-sm font-medium ${pathname === "/" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"}`}>
             Aplicaciones
           </Link>
@@ -45,7 +45,9 @@ export function NavBar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium ${active ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"}`}
+                className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ${
+                  active ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
+                }`}
               >
                 {link.label}
               </Link>
@@ -59,6 +61,15 @@ export function NavBar() {
           Cerrar sesión
         </button>
       </div>
+      {inPortfolio && (
+        <nav aria-label="Navegación rápida móvil" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-slate-200 bg-white/95 p-2 shadow-[0_-4px_16px_rgba(15,23,42,0.08)] backdrop-blur md:hidden">
+          {portfolioLinks.filter((link) => ["/cartera", "/transacciones", "/importar", "/config"].includes(link.href)).map((link) => (
+            <Link key={link.href} href={link.href} className={`rounded-lg px-2 py-2 text-center text-xs font-medium ${pathname === link.href ? "bg-slate-900 text-white" : "text-slate-600"}`}>
+              {link.label === "Configuración" ? "Config." : link.label}
+            </Link>
+          ))}
+        </nav>
+      )}
     </header>
   );
 }
