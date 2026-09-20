@@ -108,6 +108,11 @@ movimiento del tipo de cambio.
   `src/proxy.ts` (Proxy/Middleware de Next.js) y la sesión es una cookie
   `HttpOnly` con el hash de la contraseña, nunca la contraseña en texto
   plano.
+- **Freno a fuerza bruta en el login**: `/api/login` cuenta los intentos
+  fallidos por IP en la tabla `LoginAttempt` (Postgres, porque serverless no
+  tiene memoria compartida entre invocaciones). Los primeros 5 intentos son
+  libres; de ahí en más cada fallo duplica el bloqueo (30s, 60s, 120s… hasta
+  un tope de 1 hora), y se resetea al loguearse bien. `src/lib/loginRateLimit.ts`.
 - **Aplicación instalable (PWA)**: desde la portada se puede instalar JMR en
   Android, iPhone, iPad y computadores compatibles. Al abrirla desde la
   pantalla de inicio funciona en modo independiente, conserva el acceso con

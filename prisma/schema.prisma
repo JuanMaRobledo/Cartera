@@ -14,6 +14,16 @@ model Setting {
   baseCurrency  String @default("USD")
 }
 
+// Backoff de intentos fallidos de login por IP, para frenar fuerza bruta
+// contra /api/login. Serverless no tiene memoria compartida entre
+// invocaciones, así que este contador vive en Postgres en vez de en RAM.
+model LoginAttempt {
+  ip          String    @id
+  failedCount Int       @default(0)
+  lockedUntil DateTime?
+  updatedAt   DateTime  @updatedAt
+}
+
 model Currency {
   code   String @id // ISO 4217, ej. "USD", "EUR", "ARS"
   name   String
