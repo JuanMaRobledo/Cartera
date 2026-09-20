@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { InstallAppCard } from "@/components/InstallAppCard";
 
@@ -49,9 +50,12 @@ export default function AppsHomePage() {
             </p>
           </div>
           <div className="flex shrink-0 justify-center sm:justify-end">
-            <img
-              src="/jmr-roble-foso-mobile.png?v=1"
+            <Image
+              src="/jmr-roble-foso-mobile.png"
               alt="JMR · El Roble en el Foso"
+              width={208}
+              height={208}
+              priority
               className="h-44 w-44 object-contain drop-shadow-2xl sm:h-52 sm:w-52"
             />
           </div>

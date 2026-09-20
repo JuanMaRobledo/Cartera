@@ -1,4 +1,4 @@
-const CACHE_NAME = "jmr-shell-v2";
+const CACHE_NAME = "jmr-shell-v3";
 const OFFLINE_URL = "/offline.html";
 const SHELL_ASSETS = [
   OFFLINE_URL,
@@ -6,7 +6,7 @@ const SHELL_ASSETS = [
   "/icons/icon-512.png",
   "/icons/icon-maskable-512.png",
   "/icons/apple-touch-icon.png",
-  "/jmr-roble-foso-mobile.png?v=1",
+  "/jmr-roble-foso-mobile.png",
 ];
 
 self.addEventListener("install", (event) => {
