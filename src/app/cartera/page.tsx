@@ -83,6 +83,7 @@ export default function DashboardPage() {
   const [assetTypeFilter, setAssetTypeFilter] = useState("ALL");
   const [searchFilter, setSearchFilter] = useState("");
   const [netWorthHistory, setNetWorthHistory] = useState<NetWorthPoint[]>([]);
+  const [pdfDownloading, setPdfDownloading] = useState(false);
 
   const load = (scopeAccountId: string) =>
     fetch(scopeAccountId ? `/api/portfolio?accountId=${scopeAccountId}` : "/api/portfolio")
@@ -272,6 +273,27 @@ export default function DashboardPage() {
     URL.revokeObjectURL(url);
   };
 
+  const downloadPdf = async () => {
+    setPdfDownloading(true);
+    try {
+      const url = accountId ? `/api/portfolio/pdf?accountId=${accountId}` : "/api/portfolio/pdf";
+      const res = await fetch(url);
+      if (!res.ok) {
+        setRefreshMsg("No se pudo generar el PDF.");
+        return;
+      }
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `cartera-${new Date().toISOString().slice(0, 10)}.pdf`;
+      link.click();
+      URL.revokeObjectURL(blobUrl);
+    } finally {
+      setPdfDownloading(false);
+    }
+  };
+
   const allocationByType = Object.entries(
     openPositions.reduce<Record<string, number>>((acc, p) => {
       const label = ASSET_TYPE_LABELS[p.assetType as keyof typeof ASSET_TYPE_LABELS] ?? p.assetType;
@@ -313,7 +335,9 @@ export default function DashboardPage() {
         <div className="text-right">
           <div className="flex flex-wrap justify-end gap-2">
             <button className="btn-secondary" onClick={exportCsv} disabled={openPositions.length === 0}>Exportar CSV</button>
-            <button className="btn-secondary print:hidden" onClick={() => window.print()}>Guardar PDF</button>
+            <button className="btn-secondary" onClick={downloadPdf} disabled={pdfDownloading}>
+              {pdfDownloading ? "Generando PDF…" : "Descargar PDF"}
+            </button>
             <button className="btn-secondary" onClick={refreshPrices} disabled={refreshing}>
               {refreshing ? "Actualizando…" : "Actualizar precios"}
             </button>

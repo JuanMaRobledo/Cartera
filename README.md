@@ -123,6 +123,11 @@ movimiento del tipo de cambio.
   por el cron diario) guarda una foto de mercado + efectivo − deuda del día
   en `NetWorthSnapshot`, y `/cartera` la grafica como serie de tiempo — para
   ver la evolución real, no solo el número de hoy.
+- **Reporte en PDF**: el botón "Descargar PDF" de `/cartera` genera un PDF de
+  verdad en el servidor (con `@react-pdf/renderer`, vía `GET
+  /api/portfolio/pdf`, respeta el filtro de cuenta activo) con formato fijo
+  — resumen, retorno % por moneda y la tabla de posiciones abiertas — en vez
+  de depender del diálogo de impresión del navegador.
 
 El motor de cálculo está en `src/lib/portfolio.ts` y tiene tests unitarios en
 `src/lib/portfolio.test.ts` que documentan y verifican la lógica (costo
