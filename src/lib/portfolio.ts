@@ -525,3 +525,10 @@ export function xirr(cashFlows: CashFlow[], guess = 0.1): number | null {
   }
   return (lo + hi) / 2;
 }
+
+/** Patrimonio neto: mercado + efectivo disponible - deuda (margen/saldos negativos). */
+export function computeNetWorthBase(
+  summary: Pick<PortfolioSummary, "totalMarketValueBase" | "totalCashBase" | "totalDebtBase">,
+): number {
+  return summary.totalMarketValueBase + summary.totalCashBase - summary.totalDebtBase;
+}

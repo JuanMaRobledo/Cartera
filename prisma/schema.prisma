@@ -24,6 +24,19 @@ model LoginAttempt {
   updatedAt   DateTime  @updatedAt
 }
 
+// Una foto por día del patrimonio neto total (todas las cuentas), tomada por
+// el cron diario y por el refresco manual de precios. Permite graficar la
+// evolución en el tiempo en vez de solo mostrar el número de hoy.
+model NetWorthSnapshot {
+  id              String   @id @default(cuid())
+  date            DateTime @unique
+  marketValueBase Float
+  cashBase        Float
+  debtBase        Float
+  netWorthBase    Float
+  createdAt       DateTime @default(now())
+}
+
 model Currency {
   code   String @id // ISO 4217, ej. "USD", "EUR", "ARS"
   name   String

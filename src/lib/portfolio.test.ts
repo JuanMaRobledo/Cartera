@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   computeCashBalances,
+  computeNetWorthBase,
   computePortfolioSummary,
   computePositions,
   xirr,
@@ -349,6 +350,20 @@ describe("computePortfolioSummary", () => {
     expect(summary.totalCashBase).toBe(0);
     expect(summary.totalDebtBase).toBeCloseTo(300, 6);
     expect(summary.totalCostBase).toBeCloseTo(1000, 6);
+  });
+});
+
+describe("computeNetWorthBase", () => {
+  it("resta la deuda una sola vez, no la mezcla con el efectivo disponible", () => {
+    expect(
+      computeNetWorthBase({ totalMarketValueBase: 10000, totalCashBase: 500, totalDebtBase: 300 }),
+    ).toBeCloseTo(10200, 6);
+  });
+
+  it("da negativo si la deuda supera mercado + efectivo", () => {
+    expect(
+      computeNetWorthBase({ totalMarketValueBase: 100, totalCashBase: 0, totalDebtBase: 500 }),
+    ).toBeCloseTo(-400, 6);
   });
 });
 

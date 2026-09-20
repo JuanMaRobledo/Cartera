@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { refreshPrices } from "@/lib/dailyRefresh";
+import { refreshPrices, snapshotNetWorth } from "@/lib/dailyRefresh";
 
 export async function POST() {
   const result = await refreshPrices();
+  await snapshotNetWorth();
   return NextResponse.json(result);
 }

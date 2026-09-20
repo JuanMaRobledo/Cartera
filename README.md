@@ -119,6 +119,10 @@ movimiento del tipo de cambio.
   usuario y contraseña y muestra una pantalla neutra cuando no hay conexión.
   Por seguridad, el service worker no guarda las páginas autenticadas ni las
   respuestas de la API con información financiera.
+- **Historial de patrimonio neto**: cada actualización de precios (manual o
+  por el cron diario) guarda una foto de mercado + efectivo − deuda del día
+  en `NetWorthSnapshot`, y `/cartera` la grafica como serie de tiempo — para
+  ver la evolución real, no solo el número de hoy.
 
 El motor de cálculo está en `src/lib/portfolio.ts` y tiene tests unitarios en
 `src/lib/portfolio.test.ts` que documentan y verifican la lógica (costo

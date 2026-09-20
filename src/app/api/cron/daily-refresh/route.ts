@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { refreshPrices, refreshTrmToday } from "@/lib/dailyRefresh";
+import { refreshPrices, refreshTrmToday, snapshotNetWorth } from "@/lib/dailyRefresh";
 
 // Vercel invoca esta ruta según el horario de vercel.json, con
 // "Authorization: Bearer $CRON_SECRET" — hay que definir CRON_SECRET como
@@ -15,5 +15,8 @@ export async function GET(request: Request) {
   }
 
   const [prices, trm] = await Promise.all([refreshPrices(), refreshTrmToday()]);
-  return NextResponse.json({ prices, trm });
+  // Corre después, no en paralelo: necesita los precios/TRM ya actualizados
+  // arriba para que la foto del patrimonio neto de hoy sea correcta.
+  const netWorth = await snapshotNetWorth();
+  return NextResponse.json({ prices, trm, netWorth });
 }

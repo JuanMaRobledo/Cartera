@@ -5,6 +5,7 @@ import { formatMoney, formatPercent, signClass } from "@/lib/format";
 import { ASSET_TYPE_LABELS } from "@/lib/enums";
 import { AllocationDonut } from "@/components/charts/AllocationDonut";
 import { PerformanceBreakdownChart } from "@/components/charts/PerformanceBreakdownChart";
+import { NetWorthHistoryChart, type NetWorthPoint } from "@/components/charts/NetWorthHistoryChart";
 import { ColumnPicker, useVisibleColumns, type ColumnDef } from "@/components/ColumnPicker";
 
 interface PositionDto {
@@ -81,6 +82,7 @@ export default function DashboardPage() {
   const [accountId, setAccountId] = useState("");
   const [assetTypeFilter, setAssetTypeFilter] = useState("ALL");
   const [searchFilter, setSearchFilter] = useState("");
+  const [netWorthHistory, setNetWorthHistory] = useState<NetWorthPoint[]>([]);
 
   const load = (scopeAccountId: string) =>
     fetch(scopeAccountId ? `/api/portfolio?accountId=${scopeAccountId}` : "/api/portfolio")
@@ -92,6 +94,9 @@ export default function DashboardPage() {
     fetch("/api/accounts")
       .then((r) => r.json())
       .then(setAccounts);
+    fetch("/api/net-worth-history")
+      .then((r) => r.json())
+      .then(setNetWorthHistory);
   }, []);
 
   useEffect(() => {
@@ -114,6 +119,9 @@ export default function DashboardPage() {
           (failed.length > 0 ? `; sin datos para ${failed.map((f) => f.ticker).join(", ")}` : "."),
       );
       await load(accountId);
+      fetch("/api/net-worth-history")
+        .then((r) => r.json())
+        .then(setNetWorthHistory);
     } finally {
       setRefreshing(false);
     }
@@ -400,6 +408,14 @@ export default function DashboardPage() {
             />
           ))}
         </div>
+      </div>
+
+      <div className="card">
+        <h2 className="mb-1 font-medium">Patrimonio neto en el tiempo</h2>
+        <p className="mb-3 text-sm text-slate-500">
+          Mercado + efectivo − deuda, todas las cuentas juntas. Se guarda una foto por día.
+        </p>
+        <NetWorthHistoryChart data={netWorthHistory} baseCurrency={baseCurrency} />
       </div>
 
       <div className="card">

@@ -3,6 +3,8 @@
 import { prisma } from "./prisma";
 import { fetchYahooQuotes } from "./yahooFinance";
 import { computeFxRateFromTrm, fetchTrm } from "./trm";
+import { getAssetsMap, getLatestFxRates, getLatestQuotes, getRawTransactions } from "./data";
+import { computeCashBalances, computeNetWorthBase, computePortfolioSummary, computePositions } from "./portfolio";
 
 export interface PriceRefreshResult {
   updated: { assetId: string; ticker: string; price: number }[];
@@ -73,4 +75,51 @@ export async function refreshTrmToday(): Promise<TrmRefreshResult> {
   });
 
   return { ok: true, trm: trm.value, currencyCode: target.currencyCode };
+}
+
+export interface NetWorthSnapshotResult {
+  date: string;
+  netWorthBase: number;
+}
+
+/**
+ * Guarda una foto del patrimonio neto total (todas las cuentas juntas) del
+ * día de hoy. Idempotente por fecha: si ya existe una foto de hoy, la
+ * reemplaza en vez de duplicarla — así corre bien tanto desde el cron diario
+ * como desde "Actualizar precios" sin ensuciar el historial.
+ */
+export async function snapshotNetWorth(): Promise<NetWorthSnapshotResult> {
+  const [transactions, assets, quotes, fxRates] = await Promise.all([
+    getRawTransactions(undefined),
+    getAssetsMap(),
+    getLatestQuotes(),
+    getLatestFxRates(),
+  ]);
+
+  const positions = computePositions(transactions, assets, quotes, fxRates);
+  const cashBalances = computeCashBalances(transactions, fxRates);
+  const summary = computePortfolioSummary(positions, cashBalances);
+  const netWorthBase = computeNetWorthBase(summary);
+
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  await prisma.netWorthSnapshot.upsert({
+    where: { date: today },
+    update: {
+      marketValueBase: summary.totalMarketValueBase,
+      cashBase: summary.totalCashBase,
+      debtBase: summary.totalDebtBase,
+      netWorthBase,
+    },
+    create: {
+      date: today,
+      marketValueBase: summary.totalMarketValueBase,
+      cashBase: summary.totalCashBase,
+      debtBase: summary.totalDebtBase,
+      netWorthBase,
+    },
+  });
+
+  return { date: today.toISOString().slice(0, 10), netWorthBase };
 }
