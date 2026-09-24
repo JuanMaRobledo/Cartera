@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title desc">
+  <title id="title">Logo del Modelo JMR</title>
+  <desc id="desc">Prisma de valoración dentro del foso de la identidad JMR</desc>
+  <defs>
+    <linearGradient id="bg" x1="22" y1="20" x2="138" y2="140" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3E5D43"/>
+      <stop offset="1" stop-color="#253C2B"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="47" y1="111" x2="112" y2="47" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A97D35"/>
+      <stop offset=".5" stop-color="#E0C47F"/>
+      <stop offset="1" stop-color="#B18A45"/>
+    </linearGradient>
+  </defs>
+  <circle cx="80" cy="80" r="72" fill="#FFF9EF"/>
+  <circle cx="80" cy="80" r="67" fill="none" stroke="#B18A45" stroke-width="2"/>
+  <circle cx="80" cy="80" r="58" fill="url(#bg)"/>
+  <circle cx="80" cy="80" r="50" fill="none" stroke="#D7B870" stroke-opacity=".38"/>
+  <path d="m80 43 34 30-34 44-34-44 34-30Z" fill="none" stroke="url(#gold)" stroke-width="3" stroke-linejoin="round"/>
+  <path d="m46 73 34 12 34-12M80 43v74M59 59l21 26 21-26" fill="none" stroke="#F7EFE2" stroke-opacity=".88" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="80" cy="85" r="6" fill="#D7B870" stroke="#FFF9EF" stroke-width="2"/>
+</svg>
