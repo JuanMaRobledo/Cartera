@@ -5,105 +5,130 @@ import { InstallAppCard } from "@/components/InstallAppCard";
 const apps = [
   {
     name: "Seguimiento de cartera",
-    description: "Posiciones, rentabilidad real, efectivo, deuda y efecto cambiario en un solo panel.",
+    description: "Comprende cómo evolucionan tus posiciones, qué aporta cada activo y cómo influye el tipo de cambio.",
     href: "/cartera",
-    action: "Abrir cartera",
+    action: "Entrar a la cartera",
     eyebrow: "Inversiones",
-    accent: "from-sky-500 to-indigo-600",
-    icon: "↗",
+    icon: "01",
     external: false,
+    featured: true,
   },
   {
     name: "Modelo JMR",
-    description: "Bitácora de valoración, visor cuantitativo, research fundamental y portafolio unificado.",
+    description: "Analiza negocios, registra tus tesis de inversión y reúne el research fundamental.",
     href: "https://modelo-jmr.vercel.app",
     action: "Abrir Modelo JMR",
     eyebrow: "Valoración",
-    accent: "from-indigo-500 to-violet-600",
-    icon: "◇",
+    icon: "02",
     external: true,
+    featured: false,
   },
   {
     name: "Presupuesto personal",
-    description: "Presupuesto, cuentas, tarjetas, deudas, flujo de caja y patrimonio personal.",
+    description: "Organiza cuentas, tarjetas, deudas, flujo de caja y patrimonio personal.",
     href: "https://juanmarobledo.github.io/presupuesto-app-web/",
     action: "Abrir presupuesto",
     eyebrow: "Finanzas personales",
-    accent: "from-emerald-500 to-teal-600",
-    icon: "$",
+    icon: "03",
     external: true,
+    featured: false,
   },
 ] as const;
 
 export default function AppsHomePage() {
+  const featured = apps[0];
+  const secondary = apps.slice(1);
+
   return (
-    <div className="space-y-10 py-6 sm:py-10">
-      <section className="relative overflow-hidden rounded-3xl bg-slate-950 px-6 py-10 text-white shadow-xl sm:px-10 sm:py-14">
-        <div className="absolute -right-20 -top-28 h-72 w-72 rounded-full bg-sky-500/20 blur-3xl" />
-        <div className="absolute -bottom-32 left-1/3 h-64 w-64 rounded-full bg-indigo-500/20 blur-3xl" />
-        <div className="relative flex flex-col gap-8 sm:flex-row sm:items-center sm:justify-between">
-          <div className="max-w-3xl">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-sky-300">Centro de aplicaciones</p>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl">Todo tu ecosistema financiero, desde un solo lugar.</h1>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
-              Selecciona la herramienta que necesitas. Cada aplicación conserva sus propios datos y funciones.
-            </p>
+    <div className="space-y-8 py-4 sm:py-8">
+      <section className="jmr-hero">
+        <div className="relative z-10 max-w-3xl">
+          <p className="jmr-eyebrow">JMR · Centro financiero personal</p>
+          <h1 className="mt-4 font-serif text-4xl font-medium leading-[1.05] tracking-tight text-[#f7efe2] sm:text-6xl">
+            Conocer bien cada número cambia la forma de decidir.
+          </h1>
+          <p className="mt-5 max-w-2xl text-base leading-7 text-[#d9dfd6] sm:text-lg">
+            Un espacio sereno para ordenar tus finanzas, seguir tu patrimonio y comprender el valor de las empresas.
+          </p>
+          <div className="mt-7 flex flex-wrap items-center gap-4">
+            <Link href="/cartera" className="jmr-hero-action">
+              Ver mi cartera <span aria-hidden="true">→</span>
+            </Link>
+            <span className="text-xs uppercase tracking-[0.16em] text-[#aebbae]">Disciplina · Claridad · Perspectiva</span>
           </div>
-          <div className="flex shrink-0 justify-center sm:justify-end">
+        </div>
+        <div className="relative z-10 hidden shrink-0 flex-col items-center lg:flex">
+          <div className="grid h-48 w-48 place-items-center rounded-full border border-[#d7b870]/60 bg-[#203729] shadow-[0_0_0_18px_rgba(215,184,112,0.06)]">
             <Image
               src="/jmr-roble-foso-mobile.png"
               alt="JMR · El Roble en el Foso"
-              width={208}
-              height={208}
+              width={176}
+              height={176}
               priority
-              className="h-44 w-44 object-contain drop-shadow-2xl sm:h-52 sm:w-52"
+              className="h-40 w-40 object-contain drop-shadow-2xl"
             />
           </div>
+          <p className="mt-5 font-serif text-sm italic text-[#d7b870]">El Roble en el Foso</p>
         </div>
       </section>
 
       <InstallAppCard />
 
       <section aria-labelledby="apps-title">
-        <div className="mb-5 flex items-end justify-between gap-4">
+        <div className="mb-5 flex items-end gap-5">
           <div>
-            <p className="text-sm font-medium text-sky-700">Tus herramientas</p>
-            <h2 id="apps-title" className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
-              Aplicaciones disponibles
+            <p className="jmr-eyebrow text-[#9a7437]">Tu espacio</p>
+            <h2 id="apps-title" className="mt-1 font-serif text-3xl font-medium tracking-tight text-[#2f4934]">
+              ¿Qué quieres revisar hoy?
             </h2>
           </div>
-          <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-slate-600">{apps.length} aplicaciones</span>
+          <span className="mb-2 hidden h-px flex-1 bg-[#d8c7ad] sm:block" />
         </div>
 
-        <div className="grid gap-5 md:grid-cols-3">
-          {apps.map((app) => {
-            const card = (
-              <>
-                <div className={`mb-7 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${app.accent} text-xl font-semibold text-white shadow-lg`}>
-                  {app.icon}
-                </div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{app.eyebrow}</p>
-                <h3 className="mt-2 text-xl font-semibold text-slate-950">{app.name}</h3>
-                <p className="mt-3 flex-1 text-sm leading-6 text-slate-600">{app.description}</p>
-                <div className="mt-7 flex items-center justify-between border-t border-slate-100 pt-4 text-sm font-semibold text-slate-900">
-                  <span>{app.action}</span>
+        <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
+          {featured && (
+            <Link href={featured.href} className="jmr-feature-card group">
+              <span className="jmr-card-number">{featured.icon}</span>
+              <div className="relative z-10 mt-auto">
+                <p className="jmr-eyebrow text-[#d7b870]">{featured.eyebrow}</p>
+                <h3 className="mt-3 font-serif text-3xl font-medium text-[#fffaf1]">{featured.name}</h3>
+                <p className="mt-3 max-w-xl text-sm leading-6 text-[#ced7cd]">{featured.description}</p>
+                <div className="mt-7 flex items-center justify-between border-t border-white/15 pt-4 text-sm font-semibold text-[#e6cf99]">
+                  <span>{featured.action}</span>
                   <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">→</span>
                 </div>
-              </>
-            );
+              </div>
+            </Link>
+          )}
 
-            const className = "group flex min-h-72 flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2";
+          <div className="grid gap-5">
+            {secondary.map((app) => {
+              const content = (
+                <>
+                  <span className="jmr-small-number">{app.icon}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="jmr-eyebrow text-[#9a7437]">{app.eyebrow}</p>
+                    <h3 className="mt-2 font-serif text-2xl font-medium text-[#2f4934]">{app.name}</h3>
+                    <p className="mt-2 text-sm leading-6 text-[#746b5c]">{app.description}</p>
+                    <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#6d5227]">
+                      {app.action} <span aria-hidden="true">↗</span>
+                    </span>
+                  </div>
+                </>
+              );
+              const className = "jmr-secondary-card group";
 
-            return app.external ? (
-              <a key={app.name} href={app.href} target="_blank" rel="noreferrer" className={className}>
-                {card}
-              </a>
-            ) : (
-              <Link key={app.name} href={app.href} className={className}>
-                {card}
-              </Link>
-            );
-          })}
+              return app.external ? (
+                <a key={app.name} href={app.href} target="_blank" rel="noreferrer" className={className}>
+                  {content}
+                </a>
+              ) : (
+                <Link key={app.name} href={app.href} className={className}>
+                  {content}
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </section>
     </div>
