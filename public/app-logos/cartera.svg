@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title desc">
+  <title id="title">Logo de Cartera</title>
+  <desc id="desc">Crecimiento patrimonial dentro del foso de la identidad JMR</desc>
+  <defs>
+    <linearGradient id="bg" x1="24" y1="18" x2="136" y2="142" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3E5D43"/>
+      <stop offset="1" stop-color="#253C2B"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="48" y1="111" x2="116" y2="49" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A97D35"/>
+      <stop offset=".5" stop-color="#E0C47F"/>
+      <stop offset="1" stop-color="#B18A45"/>
+    </linearGradient>
+  </defs>
+  <circle cx="80" cy="80" r="72" fill="#FFF9EF"/>
+  <circle cx="80" cy="80" r="67" fill="none" stroke="#B18A45" stroke-width="2"/>
+  <circle cx="80" cy="80" r="58" fill="url(#bg)"/>
+  <circle cx="80" cy="80" r="50" fill="none" stroke="#D7B870" stroke-opacity=".38"/>
+  <path d="M48 108h64" stroke="#F7EFE2" stroke-opacity=".55" stroke-width="2" stroke-linecap="round"/>
+  <path d="M53 101V88M70 101V78M87 101V68M104 101V56" stroke="#F7EFE2" stroke-width="6" stroke-linecap="round"/>
+  <path d="M52 83 70 73l17 3 22-25" fill="none" stroke="url(#gold)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="52" cy="83" r="4" fill="#D7B870"/>
+  <circle cx="70" cy="73" r="4" fill="#D7B870"/>
+  <circle cx="87" cy="76" r="4" fill="#D7B870"/>
+  <circle cx="109" cy="51" r="5" fill="#FFF9EF" stroke="#D7B870" stroke-width="3"/>
+</svg>
