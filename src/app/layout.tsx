@@ -5,7 +5,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "JMR · Centro financiero",
-  description: "Seguimiento de cartera de inversiones multi-moneda",
+  description: "Presupuesto, cartera y valoración empresarial en un solo ecosistema financiero",
   applicationName: "JMR",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#020617",
+  themeColor: "#314a35",
   colorScheme: "light",
 };
 
@@ -33,9 +33,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <PwaRegistration />
         <NavBar />
-        <main id="main-content" className="mx-auto min-h-[calc(100vh-9rem)] max-w-6xl px-4 py-6">{children}</main>
-        <footer className="mx-auto max-w-6xl px-4 pb-8 pt-4 text-center text-xs text-slate-500">
-          JMR · Centro financiero
+        <main id="main-content" className="mx-auto min-h-[calc(100vh-9rem)] max-w-7xl px-4 py-6">{children}</main>
+        <footer className="mx-auto flex max-w-7xl flex-wrap justify-between gap-3 px-4 pb-24 pt-4 text-[0.68rem] uppercase tracking-[0.12em] text-[#887a64] md:pb-8">
+          <span>JMR · Centro financiero</span>
+          <span>Disciplina · Claridad · Perspectiva</span>
         </footer>
       </body>
     </html>
