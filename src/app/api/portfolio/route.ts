@@ -10,10 +10,14 @@ import {
 import { computeCashBalances, computePortfolioSummary, computePositions } from "@/lib/portfolio";
 
 export async function GET(request: Request) {
-  const accountId = new URL(request.url).searchParams.get("accountId") ?? undefined;
+  const searchParams = new URL(request.url).searchParams;
+  const accountIds = (searchParams.get("accountIds") ?? searchParams.get("accountId") ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
   const [baseCurrency, transactions, assets, quotes, fxRates, latestTrm] = await Promise.all([
     getBaseCurrency(),
-    getRawTransactions(accountId),
+    getRawTransactions(accountIds),
     getAssetsMap(),
     getLatestQuotes(),
     getLatestFxRates(),
@@ -24,5 +28,11 @@ export async function GET(request: Request) {
   const cashBalances = computeCashBalances(transactions, fxRates);
   const summary = computePortfolioSummary(positions, cashBalances);
 
-  return NextResponse.json({ baseCurrency, positions, cashBalances, summary });
+  return NextResponse.json({
+    baseCurrency,
+    currentTrmToCop: latestTrm?.value ?? null,
+    positions,
+    cashBalances,
+    summary,
+  });
 }

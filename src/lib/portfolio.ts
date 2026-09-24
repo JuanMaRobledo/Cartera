@@ -128,7 +128,19 @@ export interface AssetPosition {
   /** totalReturnBase / totalInvestedBase, o null si nunca se invirtió nada (p. ej. solo dividendos). */
   returnPct: number | null;
 
+  /**
+   * Flujos del inversor ya convertidos a USD y COP en la fecha de cada
+   * movimiento. Incluyen una valuación terminal para las posiciones abiertas
+   * y permiten calcular XIRR de cualquier selección de activos.
+   */
+  cashFlowsUsd: PositionCashFlow[] | null;
+  cashFlowsCop: PositionCashFlow[] | null;
+
   lots: RealizedLot[];
+}
+
+export interface PositionCashFlow extends CashFlow {
+  isTerminal: boolean;
 }
 
 function emptyPosition(asset: AssetInfo): AssetPosition {
@@ -176,8 +188,26 @@ function emptyPosition(asset: AssetInfo): AssetPosition {
     totalReturnFxEffectBase: 0,
     returnPctLocal: null,
     returnPct: null,
+    cashFlowsUsd: asset.currencyCode === "USD" ? [] : null,
+    cashFlowsCop: asset.currencyCode === "COP" ? [] : null,
     lots: [],
   };
+}
+
+function transactionCashFlowLocal(tx: RawTransaction): number | null {
+  const commission = tx.commission ?? 0;
+  switch (tx.type) {
+    case "BUY":
+      return -((tx.quantity ?? 0) * (tx.price ?? 0) + commission);
+    case "SELL":
+      return (tx.quantity ?? 0) * (tx.price ?? 0) - commission;
+    case "DIVIDEND":
+      return (tx.amount ?? (tx.quantity ?? 0) * (tx.price ?? 0)) - commission;
+    case "FEE":
+      return -(tx.amount ?? commission);
+    default:
+      return null;
+  }
 }
 
 /**
@@ -208,9 +238,34 @@ export function computePositions(
     if (!asset) continue;
     const sorted = [...txs].sort((a, b) => a.date.getTime() - b.date.getTime());
     const position = emptyPosition(asset);
+    const cashFlowsUsd: PositionCashFlow[] = [];
+    const cashFlowsCop: PositionCashFlow[] = [];
+    let usdCashFlowsComplete = asset.currencyCode === "USD" || asset.currencyCode === "COP";
+    let copCashFlowsComplete = usdCashFlowsComplete;
 
     for (const tx of sorted) {
       const commission = tx.commission ?? 0;
+      const localCashFlow = transactionCashFlowLocal(tx);
+      if (localCashFlow != null && localCashFlow !== 0) {
+        if (asset.currencyCode === "USD") {
+          cashFlowsUsd.push({ date: tx.date, amount: localCashFlow, isTerminal: false });
+          if (tx.trmToCop != null) {
+            cashFlowsCop.push({ date: tx.date, amount: localCashFlow * tx.trmToCop, isTerminal: false });
+          } else {
+            copCashFlowsComplete = false;
+          }
+        } else if (asset.currencyCode === "COP") {
+          cashFlowsCop.push({ date: tx.date, amount: localCashFlow, isTerminal: false });
+          if (tx.trmToCop != null && tx.trmToCop > 0) {
+            cashFlowsUsd.push({ date: tx.date, amount: localCashFlow / tx.trmToCop, isTerminal: false });
+          } else {
+            usdCashFlowsComplete = false;
+          }
+        } else {
+          usdCashFlowsComplete = false;
+          copCashFlowsComplete = false;
+        }
+      }
 
       if (tx.type === "BUY" || tx.type === "SELL") {
         const tradeQty = tx.quantity ?? 0;
@@ -382,6 +437,33 @@ export function computePositions(
           position.trmCoverageComplete = false;
         }
       }
+
+      const terminalDate = quote.date;
+      if (position.marketValueLocal != null) {
+        if (asset.currencyCode === "USD") {
+          cashFlowsUsd.push({ date: terminalDate, amount: position.marketValueLocal, isTerminal: true });
+          if (currentTrmToCop != null) {
+            cashFlowsCop.push({
+              date: terminalDate,
+              amount: position.marketValueLocal * currentTrmToCop,
+              isTerminal: true,
+            });
+          } else {
+            copCashFlowsComplete = false;
+          }
+        } else if (asset.currencyCode === "COP") {
+          cashFlowsCop.push({ date: terminalDate, amount: position.marketValueLocal, isTerminal: true });
+          if (currentTrmToCop != null && currentTrmToCop > 0) {
+            cashFlowsUsd.push({
+              date: terminalDate,
+              amount: position.marketValueLocal / currentTrmToCop,
+              isTerminal: true,
+            });
+          } else {
+            usdCashFlowsComplete = false;
+          }
+        }
+      }
     }
 
     position.totalReturnLocal =
@@ -401,6 +483,8 @@ export function computePositions(
       const openFx = position.quantity === 0 ? 0 : position.unrealizedFxPnLCop;
       position.totalFxPnLCop = openFx != null ? position.realizedFxPnLCop + openFx : null;
     }
+    position.cashFlowsUsd = usdCashFlowsComplete ? cashFlowsUsd : null;
+    position.cashFlowsCop = copCashFlowsComplete ? cashFlowsCop : null;
 
     positions.set(assetId, position);
   }
@@ -659,7 +743,9 @@ export interface CashFlow {
 export function xirr(cashFlows: CashFlow[], guess = 0.1): number | null {
   const flows = [...cashFlows].sort((a, b) => a.date.getTime() - b.date.getTime());
   if (flows.length < 2) return null;
+  if (!flows.some((flow) => flow.amount < 0) || !flows.some((flow) => flow.amount > 0)) return null;
   const t0 = flows[0].date.getTime();
+  if (flows.at(-1)!.date.getTime() === t0) return null;
   const years = flows.map((f) => (f.date.getTime() - t0) / (365 * 24 * 3600 * 1000));
 
   const npv = (rate: number) => flows.reduce((sum, f, i) => sum + f.amount / Math.pow(1 + rate, years[i]), 0);
@@ -672,8 +758,8 @@ export function xirr(cashFlows: CashFlow[], guess = 0.1): number | null {
     const deriv = dnpv(rate);
     if (Math.abs(deriv) < 1e-12) break;
     const next = rate - value / deriv;
-    if (!Number.isFinite(next)) break;
-    if (Math.abs(next - rate) < 1e-7) return next;
+    if (!Number.isFinite(next) || next <= -0.999999) break;
+    if (Math.abs(next - rate) < 1e-7 && Math.abs(npv(next)) < 1e-5) return next;
     rate = next;
   }
 
@@ -682,7 +768,7 @@ export function xirr(cashFlows: CashFlow[], guess = 0.1): number | null {
   let hi = 10;
   let fLo = npv(lo);
   const fHi = npv(hi);
-  if (Number.isNaN(fLo) || Number.isNaN(fHi) || fLo * fHi > 0) return Number.isFinite(rate) ? rate : null;
+  if (Number.isNaN(fLo) || Number.isNaN(fHi) || fLo * fHi > 0) return null;
   for (let i = 0; i < 200; i++) {
     const mid = (lo + hi) / 2;
     const fMid = npv(mid);

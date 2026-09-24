@@ -82,10 +82,11 @@ export async function getAssetsMap(): Promise<Map<string, AssetInfo>> {
   );
 }
 
-export async function getRawTransactions(accountId?: string): Promise<RawTransaction[]> {
+export async function getRawTransactions(accountIds?: string | string[]): Promise<RawTransaction[]> {
+  const selectedAccountIds = Array.isArray(accountIds) ? accountIds.filter(Boolean) : accountIds ? [accountIds] : [];
   const [txs, trmHistory] = await Promise.all([
     prisma.transaction.findMany({
-      where: accountId ? { accountId } : undefined,
+      where: selectedAccountIds.length > 0 ? { accountId: { in: selectedAccountIds } } : undefined,
       orderBy: { date: "asc" },
     }),
     getTrmHistory(),
@@ -107,6 +108,9 @@ export async function getRawTransactions(accountId?: string): Promise<RawTransac
     fxFromAmount: t.fxFromAmount,
     fxToCurrency: t.fxToCurrency,
     fxToAmount: t.fxToAmount,
-    trmToCop: t.currencyCode === "USD" ? resolveTrmNear(trmHistory, t.date) : null,
+    trmToCop:
+      t.currencyCode === "USD" || t.currencyCode === "COP"
+        ? resolveTrmNear(trmHistory, t.date)
+        : null,
   }));
 }

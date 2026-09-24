@@ -12,15 +12,19 @@ import { prisma } from "@/lib/prisma";
 import { PortfolioReport } from "@/lib/pdf/PortfolioReport";
 
 export async function GET(request: Request) {
-  const accountId = new URL(request.url).searchParams.get("accountId") ?? undefined;
-  const [baseCurrency, transactions, assets, quotes, fxRates, latestTrm, account] = await Promise.all([
+  const searchParams = new URL(request.url).searchParams;
+  const accountIds = (searchParams.get("accountIds") ?? searchParams.get("accountId") ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  const [baseCurrency, transactions, assets, quotes, fxRates, latestTrm, accounts] = await Promise.all([
     getBaseCurrency(),
-    getRawTransactions(accountId),
+    getRawTransactions(accountIds),
     getAssetsMap(),
     getLatestQuotes(),
     getLatestFxRates(),
     getLatestTrm(),
-    accountId ? prisma.account.findUnique({ where: { id: accountId } }) : null,
+    accountIds.length > 0 ? prisma.account.findMany({ where: { id: { in: accountIds } } }) : [],
   ]);
 
   const positions = computePositions(transactions, assets, quotes, fxRates, latestTrm?.value ?? null);
@@ -28,7 +32,12 @@ export async function GET(request: Request) {
   const summary = computePortfolioSummary(positions, cashBalances);
 
   const buffer = await renderToBuffer(
-    PortfolioReport({ baseCurrency, accountName: account?.name ?? null, positions, summary }),
+    PortfolioReport({
+      baseCurrency,
+      accountName: accounts.length > 0 ? accounts.map((account) => account.name).join(", ") : null,
+      positions,
+      summary,
+    }),
   );
 
   return new Response(new Uint8Array(buffer), {
