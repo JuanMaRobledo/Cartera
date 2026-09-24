@@ -96,6 +96,13 @@ movimiento del tipo de cambio.
   Muestra en COP la ganancia o pérdida atribuible exclusivamente al dólar,
   separada del desempeño de la acción. Si falta parte del histórico, no estima
   silenciosamente: marca la posición como incompleta y remite a cargar la TRM.
+- **Selección interactiva**: permite combinar uno o varios brókers y activos,
+  filtrar por moneda o tipo, y recalcular en tiempo real los totales y gráficos.
+- **Vista flexible USD/COP**: cualquier grupo seleccionado puede verse
+  consolidado en dólares, en pesos o con cada activo en su moneda original.
+- **Rentabilidad anualizada (XIRR)**: usa las fechas reales de compras, ventas,
+  dividendos, comisiones y la valoración actual; también muestra el retorno
+  total del grupo y de cada activo seleccionado.
 - **Columnas personalizables**: el botón "Columnas" de la tabla de
   posiciones deja tildar o destildar qué columnas mostrar (cantidad, costo
   promedio, comisiones, dividendos, retorno %, etc.); la elección se guarda

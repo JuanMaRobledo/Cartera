@@ -181,6 +181,50 @@ describe("computePositions - efecto USD/COP por TRM histórica", () => {
     expect(p.avgPurchaseTrm).toBeNull();
     expect(p.totalFxPnLCop).toBeNull();
   });
+
+  it("genera flujos fechados en USD y COP para calcular XIRR de una selección", () => {
+    const assets = new Map([["a1", asset()]]);
+    const txs: RawTransaction[] = [
+      tx({ type: "BUY", date: new Date("2024-01-01"), quantity: 10, price: 100, trmToCop: 4000 }),
+    ];
+    const quotes = new Map<string, LatestQuote>([["a1", { price: 110, date: new Date("2025-01-01") }]]);
+
+    const [p] = computePositions(txs, assets, quotes, new Map([["USD", 1]]), 3800);
+
+    expect(p.cashFlowsUsd).toEqual([
+      { date: new Date("2024-01-01"), amount: -1000, isTerminal: false },
+      { date: new Date("2025-01-01"), amount: 1100, isTerminal: true },
+    ]);
+    expect(p.cashFlowsCop).toEqual([
+      { date: new Date("2024-01-01"), amount: -4_000_000, isTerminal: false },
+      { date: new Date("2025-01-01"), amount: 4_180_000, isTerminal: true },
+    ]);
+    expect(xirr(p.cashFlowsUsd!)).toBeCloseTo(0.1, 2);
+    expect(xirr(p.cashFlowsCop!)).toBeCloseTo(0.045, 2);
+  });
+
+  it("convierte los flujos de un activo COP a USD usando la TRM de cada fecha", () => {
+    const copAsset = asset({ id: "cop1", ticker: "ECOPETROL", currencyCode: "COP" });
+    const assets = new Map([["cop1", copAsset]]);
+    const txs: RawTransaction[] = [
+      tx({
+        assetId: "cop1",
+        currencyCode: "COP",
+        type: "BUY",
+        date: new Date("2024-01-01"),
+        quantity: 100,
+        price: 2000,
+        trmToCop: 4000,
+      }),
+    ];
+    const quotes = new Map<string, LatestQuote>([["cop1", { price: 2200, date: new Date("2025-01-01") }]]);
+
+    const [p] = computePositions(txs, assets, quotes, new Map([["COP", 1]]), 4400);
+
+    expect(p.cashFlowsCop?.map((flow) => flow.amount)).toEqual([-200_000, 220_000]);
+    expect(p.cashFlowsUsd?.map((flow) => flow.amount)).toEqual([-50, 50]);
+    expect(xirr(p.cashFlowsUsd!)).toBeCloseTo(0, 6);
+  });
 });
 
 describe("computePositions - posiciones cortas", () => {
@@ -463,5 +507,14 @@ describe("xirr", () => {
     ]);
     expect(rate).not.toBeNull();
     expect(rate!).toBeCloseTo(0.1, 1);
+  });
+
+  it("no inventa una tasa si faltan flujos de signos opuestos", () => {
+    expect(
+      xirr([
+        { date: new Date("2023-01-01"), amount: 100 },
+        { date: new Date("2024-01-01"), amount: 120 },
+      ]),
+    ).toBeNull();
   });
 });
