@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeFxRateFromTrm, parseTrmResponse } from "./trm";
+import { computeFxRateFromTrm, parseTrmResponse, resolveTrmNear } from "./trm";
 
 describe("parseTrmResponse", () => {
   it("toma el valor de la primera fila (la más reciente por vigenciadesde DESC)", () => {
@@ -37,5 +37,30 @@ describe("computeFxRateFromTrm", () => {
 
   it("con cualquier otra moneda base, no hay nada para actualizar", () => {
     expect(computeFxRateFromTrm("EUR", 4000)).toBeNull();
+  });
+});
+
+describe("resolveTrmNear", () => {
+  const points = [
+    { date: new Date("2024-01-02T00:00:00Z"), value: 3900 },
+    { date: new Date("2024-01-05T00:00:00Z"), value: 4000 },
+    { date: new Date("2024-01-10T00:00:00Z"), value: 4100 },
+  ];
+
+  it("usa la última TRM vigente en o antes del día de compra", () => {
+    expect(resolveTrmNear(points, new Date("2024-01-08T12:00:00Z"))).toBe(4000);
+  });
+
+  it("usa el primer dato disponible si el histórico empieza después de la compra", () => {
+    expect(resolveTrmNear(points, new Date("2024-01-01T00:00:00Z"))).toBe(3900);
+  });
+
+  it("no inventa una TRM si el dato disponible está demasiado lejos de la compra", () => {
+    expect(resolveTrmNear(points, new Date("2023-01-01T00:00:00Z"))).toBeNull();
+    expect(resolveTrmNear(points, new Date("2024-02-01T00:00:00Z"))).toBeNull();
+  });
+
+  it("devuelve null cuando no hay histórico", () => {
+    expect(resolveTrmNear([], new Date("2024-01-01T00:00:00Z"))).toBeNull();
   });
 });

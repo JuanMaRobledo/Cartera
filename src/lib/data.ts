@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import type { AssetInfo, LatestQuote, RawTransaction } from "./portfolio";
+import { resolveTrmNear, type TrmPoint } from "./trm";
 
 export async function getBaseCurrency(): Promise<string> {
   const setting = await prisma.setting.findUnique({ where: { id: 1 } });
@@ -16,6 +17,32 @@ export async function getLatestFxRates(): Promise<Map<string, number>> {
   }
   map.set(baseCurrency, 1);
   return map;
+}
+
+/** Histórico normalizado como TRM directa: 1 USD = N COP. */
+export async function getTrmHistory(): Promise<TrmPoint[]> {
+  const baseCurrency = await getBaseCurrency();
+  if (baseCurrency !== "USD" && baseCurrency !== "COP") return [];
+
+  const currencyCode = baseCurrency === "USD" ? "COP" : "USD";
+  const rates = await prisma.fxRate.findMany({
+    where: { currencyCode },
+    orderBy: { date: "asc" },
+  });
+
+  return rates
+    .map((rate) => ({
+      date: rate.date,
+      value: baseCurrency === "USD" ? 1 / rate.rate : rate.rate,
+    }))
+    .filter((point) => Number.isFinite(point.value) && point.value > 0);
+}
+
+export async function getLatestTrm(): Promise<TrmPoint | null> {
+  const history = await getTrmHistory();
+  const value = resolveTrmNear(history, new Date());
+  if (value == null) return null;
+  return { date: history.at(-1)?.date ?? new Date(), value };
 }
 
 /** Tipo de cambio vigente en o antes de una fecha dada (o el más antiguo disponible si no hay uno anterior). */
@@ -56,10 +83,13 @@ export async function getAssetsMap(): Promise<Map<string, AssetInfo>> {
 }
 
 export async function getRawTransactions(accountId?: string): Promise<RawTransaction[]> {
-  const txs = await prisma.transaction.findMany({
-    where: accountId ? { accountId } : undefined,
-    orderBy: { date: "asc" },
-  });
+  const [txs, trmHistory] = await Promise.all([
+    prisma.transaction.findMany({
+      where: accountId ? { accountId } : undefined,
+      orderBy: { date: "asc" },
+    }),
+    getTrmHistory(),
+  ]);
   return txs.map((t) => ({
     id: t.id,
     accountId: t.accountId,
@@ -77,5 +107,6 @@ export async function getRawTransactions(accountId?: string): Promise<RawTransac
     fxFromAmount: t.fxFromAmount,
     fxToCurrency: t.fxToCurrency,
     fxToAmount: t.fxToAmount,
+    trmToCop: t.currencyCode === "USD" ? resolveTrmNear(trmHistory, t.date) : null,
   }));
 }

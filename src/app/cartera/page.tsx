@@ -18,9 +18,13 @@ interface PositionDto {
   avgCostLocal: number;
   costBasisLocal: number;
   costBasisBase: number;
+  costBasisCop: number | null;
+  avgPurchaseTrm: number | null;
   currentPriceLocal: number | null;
   marketValueLocal: number | null;
   marketValueBase: number | null;
+  marketValueCop: number | null;
+  currentTrmToCop: number | null;
   unrealizedPnLLocal: number | null;
   unrealizedPnLBase: number | null;
   realizedPnLLocal: number;
@@ -35,6 +39,10 @@ interface PositionDto {
   totalReturnBase: number;
   totalReturnLocalPerformanceBase: number;
   totalReturnFxEffectBase: number;
+  unrealizedFxPnLCop: number | null;
+  realizedFxPnLCop: number | null;
+  totalFxPnLCop: number | null;
+  trmCoverageComplete: boolean;
   returnPctLocal: number | null;
   returnPct: number | null;
 }
@@ -58,6 +66,19 @@ interface CurrencyReturnDto {
   returnPct: number | null;
 }
 
+interface UsdCopFxSummaryDto {
+  currentTrmToCop: number | null;
+  avgPurchaseTrm: number | null;
+  openCostUsd: number;
+  openCostCop: number | null;
+  marketValueCop: number | null;
+  unrealizedFxPnLCop: number | null;
+  realizedFxPnLCop: number | null;
+  totalFxPnLCop: number | null;
+  usdPositions: number;
+  missingTrmPositions: number;
+}
+
 interface SummaryDto {
   totalMarketValueBase: number;
   totalCostBase: number;
@@ -73,6 +94,7 @@ interface SummaryDto {
   totalReturnFxEffectBase: number;
   totalReturnPct: number | null;
   returnByCurrency: CurrencyReturnDto[];
+  usdCopFx: UsdCopFxSummaryDto | null;
   positionsMissingPrice: number;
 }
 
@@ -133,10 +155,15 @@ export default function DashboardPage() {
         setRefreshMsg("No se pudieron actualizar los precios.");
         return;
       }
-      const { updated, failed } = result as { updated: unknown[]; failed: { ticker: string; error: string }[] };
+      const { updated, failed, trm } = result as {
+        updated: unknown[];
+        failed: { ticker: string; error: string }[];
+        trm?: { ok: true; trm: number } | { ok: false; error: string };
+      };
       setRefreshMsg(
         `Se actualizaron ${updated.length} precio(s)` +
-          (failed.length > 0 ? `; sin datos para ${failed.map((f) => f.ticker).join(", ")}` : "."),
+          (failed.length > 0 ? `; sin datos para ${failed.map((f) => f.ticker).join(", ")}` : ".") +
+          (trm?.ok ? ` TRM actual: ${formatTrm(trm.trm)}.` : ""),
       );
       await load(accountId);
       fetch("/api/net-worth-history")
@@ -277,6 +304,54 @@ export default function DashboardPage() {
         },
       },
       {
+        key: "trmCompra",
+        label: "TRM compra",
+        defaultVisible: true,
+        render: (p) =>
+          p.currencyCode === "USD"
+            ? p.avgPurchaseTrm != null
+              ? formatTrm(p.avgPurchaseTrm)
+              : "TRM pendiente"
+            : "—",
+      },
+      {
+        key: "valorCop",
+        label: "Valor actual COP",
+        defaultVisible: false,
+        render: (p) =>
+          p.currencyCode === "USD" && p.marketValueCop != null
+            ? formatMoney(p.marketValueCop, "COP")
+            : "—",
+      },
+      {
+        key: "efectoDolarCop",
+        label: "Efecto dólar COP",
+        defaultVisible: true,
+        render: (p) => {
+          if (p.currencyCode !== "USD") return "—";
+          if (p.totalFxPnLCop == null) return <span className="text-xs text-amber-700">TRM incompleta</span>;
+          return (
+            <span className="text-xs">
+              <span className={signClass(p.totalFxPnLCop)}>
+                Total: {formatMoney(p.totalFxPnLCop, "COP")}
+              </span>
+              <br />
+              <span className={signClass(p.unrealizedFxPnLCop ?? 0)}>
+                Abierto: {formatMoney(p.unrealizedFxPnLCop ?? 0, "COP")}
+              </span>
+              {p.realizedFxPnLCop != null && p.realizedFxPnLCop !== 0 && (
+                <>
+                  <br />
+                  <span className={signClass(p.realizedFxPnLCop)}>
+                    Realizado: {formatMoney(p.realizedFxPnLCop, "COP")}
+                  </span>
+                </>
+              )}
+            </span>
+          );
+        },
+      },
+      {
         key: "localVsFx",
         label: showPurchaseCurrency ? "Criterio" : "Local vs. FX",
         defaultVisible: true,
@@ -332,6 +407,11 @@ export default function DashboardPage() {
       `Valor mercado (${showPurchaseCurrency ? "moneda de compra" : baseCurrency})`,
       `Retorno (${showPurchaseCurrency ? "moneda de compra" : baseCurrency})`,
       `Retorno % (${showPurchaseCurrency ? "sin efecto cambiario" : "con efecto cambiario"})`,
+      "TRM promedio de compra",
+      "TRM actual",
+      "Costo histórico COP",
+      "Valor actual COP",
+      "Efecto dólar COP",
     ];
     const rows = openPositions.map((p) => [
       p.ticker,
@@ -343,6 +423,11 @@ export default function DashboardPage() {
       (showPurchaseCurrency ? p.marketValueLocal : p.marketValueBase) ?? "",
       showPurchaseCurrency ? p.totalReturnLocal : p.totalReturnBase,
       (showPurchaseCurrency ? p.returnPctLocal : p.returnPct) ?? "",
+      p.avgPurchaseTrm ?? "",
+      p.currentTrmToCop ?? "",
+      p.costBasisCop ?? "",
+      p.marketValueCop ?? "",
+      p.totalFxPnLCop ?? "",
     ]);
     const csv = [headers, ...rows].map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
@@ -509,6 +594,91 @@ export default function DashboardPage() {
           ))}
         </div>
       </div>
+
+      {summary.usdCopFx && (
+        <div className="card border-l-4 border-l-[#b18a45]">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="font-medium">Efecto del dólar frente al peso</h2>
+              <p className="mt-1 max-w-3xl text-sm text-slate-500">
+                Compara la TRM de cada compra en USD con la TRM actual. Este resultado mide únicamente el movimiento
+                del dólar; la ganancia o pérdida propia de las acciones permanece separada.
+              </p>
+            </div>
+            {summary.usdCopFx.totalFxPnLCop != null && (
+              <div className="text-right">
+                <div className="text-xs text-slate-500">Efecto cambiario total</div>
+                <div className={`text-2xl font-semibold ${signClass(summary.usdCopFx.totalFxPnLCop)}`}>
+                  {formatMoney(summary.usdCopFx.totalFxPnLCop, "COP")}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <dl className="mt-5 grid grid-cols-2 gap-x-5 gap-y-4 text-sm md:grid-cols-4">
+            <Row
+              label="TRM promedio de compra"
+              value={summary.usdCopFx.avgPurchaseTrm != null ? formatTrm(summary.usdCopFx.avgPurchaseTrm) : "—"}
+            />
+            <Row
+              label="TRM actual"
+              value={summary.usdCopFx.currentTrmToCop != null ? formatTrm(summary.usdCopFx.currentTrmToCop) : "—"}
+            />
+            <Row label="Costo abierto en USD" value={formatMoney(summary.usdCopFx.openCostUsd, "USD")} />
+            <Row
+              label="Costo histórico en COP"
+              value={summary.usdCopFx.openCostCop != null ? formatMoney(summary.usdCopFx.openCostCop, "COP") : "—"}
+            />
+            <Row
+              label="Valor actual en COP"
+              value={
+                summary.usdCopFx.marketValueCop != null
+                  ? formatMoney(summary.usdCopFx.marketValueCop, "COP")
+                  : "—"
+              }
+            />
+            <Row
+              label="Efecto en posiciones abiertas"
+              value={
+                summary.usdCopFx.unrealizedFxPnLCop != null
+                  ? formatMoney(summary.usdCopFx.unrealizedFxPnLCop, "COP")
+                  : "—"
+              }
+              valueClassName={
+                summary.usdCopFx.unrealizedFxPnLCop != null
+                  ? signClass(summary.usdCopFx.unrealizedFxPnLCop)
+                  : undefined
+              }
+            />
+            <Row
+              label="Efecto ya realizado"
+              value={
+                summary.usdCopFx.realizedFxPnLCop != null
+                  ? formatMoney(summary.usdCopFx.realizedFxPnLCop, "COP")
+                  : "—"
+              }
+              valueClassName={
+                summary.usdCopFx.realizedFxPnLCop != null
+                  ? signClass(summary.usdCopFx.realizedFxPnLCop)
+                  : undefined
+              }
+            />
+            <Row label="Posiciones USD evaluadas" value={String(summary.usdCopFx.usdPositions)} />
+          </dl>
+
+          <p className="mt-4 rounded-lg bg-[#f7f1e5] px-3 py-2 text-xs text-[#6d6048]">
+            Fórmula de la posición abierta: costo USD vigente × (TRM actual − TRM promedio histórica).
+          </p>
+
+          {summary.usdCopFx.missingTrmPositions > 0 && (
+            <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              Faltan datos históricos de TRM para {summary.usdCopFx.missingTrmPositions} posición(es) en USD. Carga el
+              período correspondiente en <a className="font-semibold underline" href="/tipos-de-cambio">Tipos de cambio</a>
+              para completar el cálculo.
+            </p>
+          )}
+        </div>
+      )}
 
       {summary.totalDebtBase > 0 && (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -739,4 +909,11 @@ function Row({ label, value, valueClassName }: { label: string; value: string; v
       <dd className={`font-medium ${valueClassName ?? "text-slate-900"}`}>{value}</dd>
     </div>
   );
+}
+
+function formatTrm(value: number): string {
+  return `COP ${new Intl.NumberFormat("es-CO", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)} / USD`;
 }
