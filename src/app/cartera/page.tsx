@@ -16,17 +16,26 @@ interface PositionDto {
   currencyCode: string;
   quantity: number;
   avgCostLocal: number;
+  costBasisLocal: number;
   costBasisBase: number;
   currentPriceLocal: number | null;
+  marketValueLocal: number | null;
   marketValueBase: number | null;
+  unrealizedPnLLocal: number | null;
   unrealizedPnLBase: number | null;
+  realizedPnLLocal: number;
   realizedPnLBase: number;
+  dividendsLocal: number;
   dividendsBase: number;
+  feesLocal: number;
   feesBase: number;
+  totalInvestedLocal: number;
   totalInvestedBase: number;
+  totalReturnLocal: number;
   totalReturnBase: number;
   totalReturnLocalPerformanceBase: number;
   totalReturnFxEffectBase: number;
+  returnPctLocal: number | null;
   returnPct: number | null;
 }
 
@@ -38,7 +47,13 @@ interface CashBalanceDto {
 
 interface CurrencyReturnDto {
   currencyCode: string;
+  marketValueLocal: number;
+  costBasisLocal: number;
   totalInvestedLocal: number;
+  unrealizedPnLLocal: number;
+  realizedPnLLocal: number;
+  dividendsLocal: number;
+  feesLocal: number;
   totalReturnLocal: number;
   returnPct: number | null;
 }
@@ -73,6 +88,8 @@ interface AccountDto {
   name: string;
 }
 
+type MoneyView = "PURCHASE" | "BASE";
+
 export default function DashboardPage() {
   const [data, setData] = useState<PortfolioDto | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +98,9 @@ export default function DashboardPage() {
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
   const [accountId, setAccountId] = useState("");
   const [assetTypeFilter, setAssetTypeFilter] = useState("ALL");
+  const [currencyFilter, setCurrencyFilter] = useState("ALL");
   const [searchFilter, setSearchFilter] = useState("");
+  const [moneyView, setMoneyView] = useState<MoneyView>("PURCHASE");
   const [netWorthHistory, setNetWorthHistory] = useState<NetWorthPoint[]>([]);
   const [pdfDownloading, setPdfDownloading] = useState(false);
 
@@ -133,6 +152,7 @@ export default function DashboardPage() {
   // por defecto hasta que "data" llega.
   const baseCurrencyForColumns = data?.baseCurrency ?? "USD";
   const totalMarketValueBaseForColumns = data?.summary.totalMarketValueBase ?? 0;
+  const showPurchaseCurrency = moneyView === "PURCHASE";
 
   const columns = useMemo<ColumnDef<PositionDto>[]>(
     () => [
@@ -179,67 +199,106 @@ export default function DashboardPage() {
         key: "valorMercado",
         label: "Valor mercado",
         defaultVisible: true,
-        render: (p) => (p.marketValueBase != null ? formatMoney(p.marketValueBase, baseCurrencyForColumns) : "—"),
+        render: (p) => {
+          const value = showPurchaseCurrency ? p.marketValueLocal : p.marketValueBase;
+          return value != null
+            ? formatMoney(value, showPurchaseCurrency ? p.currencyCode : baseCurrencyForColumns)
+            : "—";
+        },
       },
       {
         key: "noRealizada",
         label: "No realizada",
         defaultVisible: true,
-        render: (p) =>
-          p.unrealizedPnLBase != null ? (
-            <span className={signClass(p.unrealizedPnLBase)}>{formatMoney(p.unrealizedPnLBase, baseCurrencyForColumns)}</span>
+        render: (p) => {
+          const value = showPurchaseCurrency ? p.unrealizedPnLLocal : p.unrealizedPnLBase;
+          return value != null ? (
+            <span className={signClass(value)}>
+              {formatMoney(value, showPurchaseCurrency ? p.currencyCode : baseCurrencyForColumns)}
+            </span>
           ) : (
             "—"
-          ),
+          );
+        },
       },
       {
         key: "realizada",
         label: "Realizada",
         defaultVisible: true,
-        render: (p) => <span className={signClass(p.realizedPnLBase)}>{formatMoney(p.realizedPnLBase, baseCurrencyForColumns)}</span>,
+        render: (p) => {
+          const value = showPurchaseCurrency ? p.realizedPnLLocal : p.realizedPnLBase;
+          return (
+            <span className={signClass(value)}>
+              {formatMoney(value, showPurchaseCurrency ? p.currencyCode : baseCurrencyForColumns)}
+            </span>
+          );
+        },
       },
       {
         key: "dividendos",
         label: "Dividendos",
         defaultVisible: false,
-        render: (p) => formatMoney(p.dividendsBase, baseCurrencyForColumns),
+        render: (p) =>
+          formatMoney(
+            showPurchaseCurrency ? p.dividendsLocal : p.dividendsBase,
+            showPurchaseCurrency ? p.currencyCode : baseCurrencyForColumns,
+          ),
       },
       {
         key: "comisiones",
         label: "Comisiones",
         defaultVisible: false,
-        render: (p) => formatMoney(p.feesBase, baseCurrencyForColumns),
+        render: (p) =>
+          formatMoney(
+            showPurchaseCurrency ? p.feesLocal : p.feesBase,
+            showPurchaseCurrency ? p.currencyCode : baseCurrencyForColumns,
+          ),
       },
       {
         key: "retornoTotal",
         label: "Retorno total",
         defaultVisible: true,
-        render: (p) => <span className={signClass(p.totalReturnBase)}>{formatMoney(p.totalReturnBase, baseCurrencyForColumns)}</span>,
+        render: (p) => {
+          const value = showPurchaseCurrency ? p.totalReturnLocal : p.totalReturnBase;
+          return (
+            <span className={signClass(value)}>
+              {formatMoney(value, showPurchaseCurrency ? p.currencyCode : baseCurrencyForColumns)}
+            </span>
+          );
+        },
       },
       {
         key: "retornoPct",
         label: "Retorno %",
         defaultVisible: true,
-        render: (p) => (p.returnPct != null ? <span className={signClass(p.returnPct)}>{formatPercent(p.returnPct)}</span> : "—"),
+        render: (p) => {
+          const value = showPurchaseCurrency ? p.returnPctLocal : p.returnPct;
+          return value != null ? <span className={signClass(value)}>{formatPercent(value)}</span> : "—";
+        },
       },
       {
         key: "localVsFx",
-        label: "Local vs. FX",
+        label: showPurchaseCurrency ? "Criterio" : "Local vs. FX",
         defaultVisible: true,
-        render: (p) => (
-          <span className="text-xs">
-            <span className={signClass(p.totalReturnLocalPerformanceBase)}>
-              Activo: {formatMoney(p.totalReturnLocalPerformanceBase, baseCurrencyForColumns)}
+        render: (p) =>
+          showPurchaseCurrency ? (
+            <span className="text-xs text-slate-500">
+              {p.currencyCode} · sin conversión
             </span>
-            <br />
-            <span className={signClass(p.totalReturnFxEffectBase)}>
-              FX: {formatMoney(p.totalReturnFxEffectBase, baseCurrencyForColumns)}
+          ) : (
+            <span className="text-xs">
+              <span className={signClass(p.totalReturnLocalPerformanceBase)}>
+                Activo: {formatMoney(p.totalReturnLocalPerformanceBase, baseCurrencyForColumns)}
+              </span>
+              <br />
+              <span className={signClass(p.totalReturnFxEffectBase)}>
+                FX: {formatMoney(p.totalReturnFxEffectBase, baseCurrencyForColumns)}
+              </span>
             </span>
-          </span>
-        ),
+          ),
       },
     ],
-    [baseCurrencyForColumns, totalMarketValueBaseForColumns],
+    [baseCurrencyForColumns, showPurchaseCurrency, totalMarketValueBaseForColumns],
   );
   const [visibleColumns, toggleColumn] = useVisibleColumns("cartera:columnas-posiciones", columns);
   const shownColumns = columns.filter((c) => visibleColumns.has(c.key));
@@ -249,9 +308,11 @@ export default function DashboardPage() {
 
   const { summary, positions, cashBalances, baseCurrency } = data;
   const netWorth = summary.totalMarketValueBase + summary.totalCashBase - summary.totalDebtBase;
+  const currencyOptions = [...new Set(positions.map((p) => p.currencyCode))].sort();
   const openPositions = positions.filter((p) => {
     if (p.quantity === 0) return false;
     if (assetTypeFilter !== "ALL" && p.assetType !== assetTypeFilter) return false;
+    if (currencyFilter !== "ALL" && p.currencyCode !== currencyFilter) return false;
     if (searchFilter.trim()) {
       const query = searchFilter.trim().toLowerCase();
       if (!`${p.ticker} ${p.name}`.toLowerCase().includes(query)) return false;
@@ -261,8 +322,28 @@ export default function DashboardPage() {
   const closedPositions = positions.filter((p) => p.quantity === 0);
 
   const exportCsv = () => {
-    const headers = ["Ticker", "Nombre", "Tipo", "Moneda", "Cantidad", "Precio actual", "Valor mercado", "Retorno", "Retorno %"];
-    const rows = openPositions.map((p) => [p.ticker, p.name, p.assetType, p.currencyCode, p.quantity, p.currentPriceLocal ?? "", p.marketValueBase ?? "", p.totalReturnBase, p.returnPct ?? ""]);
+    const headers = [
+      "Ticker",
+      "Nombre",
+      "Tipo",
+      "Moneda",
+      "Cantidad",
+      "Precio actual",
+      `Valor mercado (${showPurchaseCurrency ? "moneda de compra" : baseCurrency})`,
+      `Retorno (${showPurchaseCurrency ? "moneda de compra" : baseCurrency})`,
+      `Retorno % (${showPurchaseCurrency ? "sin efecto cambiario" : "con efecto cambiario"})`,
+    ];
+    const rows = openPositions.map((p) => [
+      p.ticker,
+      p.name,
+      p.assetType,
+      p.currencyCode,
+      p.quantity,
+      p.currentPriceLocal ?? "",
+      (showPurchaseCurrency ? p.marketValueLocal : p.marketValueBase) ?? "",
+      showPurchaseCurrency ? p.totalReturnLocal : p.totalReturnBase,
+      (showPurchaseCurrency ? p.returnPctLocal : p.returnPct) ?? "",
+    ]);
     const csv = [headers, ...rows].map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -307,19 +388,36 @@ export default function DashboardPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Panel de cartera</h1>
-          <p className="text-sm text-slate-500">Todo expresado en moneda base: {baseCurrency}</p>
-          <div className="mt-2">
-            <label className="label">Ver</label>
-            <select className="input" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-              <option value="">Cartera completa (todas las cuentas)</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  Solo {a.name}
-                </option>
-              ))}
-            </select>
+          <p className="text-sm text-slate-500">
+            {showPurchaseCurrency
+              ? "Cada activo se muestra en la moneda en que fue comprado."
+              : `Todo expresado en moneda base: ${baseCurrency}.`}
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="label">Cuenta</label>
+              <select className="input" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+                <option value="">Cartera completa (todas las cuentas)</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    Solo {a.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label">Mostrar importes en</label>
+              <select
+                className="input"
+                value={moneyView}
+                onChange={(e) => setMoneyView(e.target.value as MoneyView)}
+              >
+                <option value="PURCHASE">Moneda de compra (COP en COP, USD en USD)</option>
+                <option value="BASE">Moneda base consolidada ({baseCurrency})</option>
+              </select>
+            </div>
             {accountId && (
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="text-xs text-slate-500 sm:col-span-2">
                 Costo promedio y ganancias calculados solo con las operaciones de esta cuenta — una misma acción
                 comprada en varios brokers va a aparecer con un costo promedio distinto acá que en la vista completa.
               </p>
@@ -366,6 +464,50 @@ export default function DashboardPage() {
           className={signClass(summary.totalReturnBase)}
           border={summary.totalReturnBase >= 0 ? "border-l-gain" : "border-l-loss"}
         />
+      </div>
+
+      <div className="card">
+        <h2 className="mb-1 font-medium">Activos y rentabilidad por moneda de compra</h2>
+        <p className="mb-4 text-sm text-slate-500">
+          Los importes de monedas diferentes se mantienen separados. El porcentaje excluye el efecto de convertirlos a {baseCurrency}.
+        </p>
+        <div className="grid gap-4 lg:grid-cols-2">
+          {summary.returnByCurrency.map((currency) => (
+            <div
+              key={currency.currencyCode}
+              className="rounded-xl border border-[#ded8ca] bg-[#fffdf8] p-4 shadow-sm"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-lg font-semibold text-[#29352d]">{currency.currencyCode}</h3>
+                <span
+                  className={`rounded-full px-3 py-1 text-sm font-semibold ${signClass(currency.returnPct ?? 0)}`}
+                >
+                  {currency.returnPct != null ? formatPercent(currency.returnPct) : "—"}
+                </span>
+              </div>
+              <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
+                <Row label="Valor de mercado" value={formatMoney(currency.marketValueLocal, currency.currencyCode)} />
+                <Row label="Costo abierto" value={formatMoney(currency.costBasisLocal, currency.currencyCode)} />
+                <Row
+                  label="Retorno total"
+                  value={formatMoney(currency.totalReturnLocal, currency.currencyCode)}
+                  valueClassName={signClass(currency.totalReturnLocal)}
+                />
+                <Row
+                  label="No realizada"
+                  value={formatMoney(currency.unrealizedPnLLocal, currency.currencyCode)}
+                  valueClassName={signClass(currency.unrealizedPnLLocal)}
+                />
+                <Row
+                  label="Realizada"
+                  value={formatMoney(currency.realizedPnLLocal, currency.currencyCode)}
+                  valueClassName={signClass(currency.realizedPnLLocal)}
+                />
+                <Row label="Dividendos" value={formatMoney(currency.dividendsLocal, currency.currencyCode)} />
+              </dl>
+            </div>
+          ))}
+        </div>
       </div>
 
       {summary.totalDebtBase > 0 && (
@@ -456,6 +598,19 @@ export default function DashboardPage() {
             <select className="input w-auto" value={assetTypeFilter} onChange={(e) => setAssetTypeFilter(e.target.value)} aria-label="Filtrar por tipo">
               <option value="ALL">Todos los tipos</option>
               {Object.entries(ASSET_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+            <select
+              className="input w-auto"
+              value={currencyFilter}
+              onChange={(e) => setCurrencyFilter(e.target.value)}
+              aria-label="Filtrar por moneda"
+            >
+              <option value="ALL">Todas las monedas</option>
+              {currencyOptions.map((currency) => (
+                <option key={currency} value={currency}>
+                  Solo {currency}
+                </option>
+              ))}
             </select>
             <ColumnPicker columns={columns} visible={visibleColumns} onToggle={toggleColumn} />
           </div>
@@ -577,11 +732,11 @@ function Metric({
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value, valueClassName }: { label: string; value: string; valueClassName?: string }) {
   return (
     <div>
       <dt className="text-xs">{label}</dt>
-      <dd className="font-medium text-slate-900">{value}</dd>
+      <dd className={`font-medium ${valueClassName ?? "text-slate-900"}`}>{value}</dd>
     </div>
   );
 }
