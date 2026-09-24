@@ -41,7 +41,7 @@ export function InstallAppCard() {
 
   if (isStandalone) return null;
 
-  const install = async () => {
+  const installApp = async () => {
     if (!installPrompt) {
       setShowHelp((current) => !current);
       return;
@@ -53,22 +53,22 @@ export function InstallAppCard() {
   };
 
   return (
-    <section className="rounded-2xl border border-sky-200 bg-sky-50 p-5 sm:flex sm:items-center sm:justify-between sm:gap-6">
+    <section className="rounded-2xl border border-[#d8c7ad] bg-[#fffaf1]/85 p-5 shadow-[0_6px_22px_rgba(67,61,45,0.06)] sm:flex sm:items-center sm:justify-between sm:gap-6">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Aplicación móvil</p>
-        <h2 className="mt-1 text-lg font-semibold text-slate-950">Instala JMR en tu celular</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-600">
+        <p className="jmr-eyebrow text-[#9a7437]">Aplicación instalable</p>
+        <h2 className="mt-1 font-serif text-xl font-medium text-[#2f4934]">Lleva JMR contigo</h2>
+        <p className="mt-1 text-sm leading-6 text-[#746b5c]">
           Instálala en el celular o computador para abrirla como una aplicación independiente, con el mismo acceso protegido.
         </p>
         {showHelp && (
-          <p className="mt-3 rounded-xl bg-white px-4 py-3 text-sm leading-6 text-slate-700 ring-1 ring-sky-100">
+          <p className="mt-3 rounded-xl border border-[#e1d2bc] bg-[#f7efe2] px-4 py-3 text-sm leading-6 text-[#625947]">
             {isIOS
               ? "En Safari, toca Compartir y luego “Añadir a pantalla de inicio”."
               : "En Chrome, abre el menú del navegador y selecciona “Instalar aplicación” o “Añadir a pantalla principal”."}
           </p>
         )}
       </div>
-      <button type="button" className="btn mt-4 w-full shrink-0 sm:mt-0 sm:w-auto" onClick={install}>
+      <button type="button" className="btn mt-4 w-full shrink-0 sm:mt-0 sm:w-auto" onClick={installApp}>
         {installPrompt ? "Instalar app" : showHelp ? "Ocultar instrucciones" : "Cómo instalar"}
       </button>
     </section>
