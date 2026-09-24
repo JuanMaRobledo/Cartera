@@ -111,6 +111,8 @@ describe("computePositions - multi-currency: verdadera rentabilidad", () => {
     // efecto cambiario = 55 - 105 = -50 (perdimos por la depreciación del EUR sobre el capital invertido)
     expect(p.unrealizedFxEffectBase).toBeCloseTo(-50, 6);
     expect(p.unrealizedLocalPerformanceBase! + p.unrealizedFxEffectBase!).toBeCloseTo(p.unrealizedPnLBase!, 6);
+    expect(p.returnPctLocal).toBeCloseTo(0.1, 6); // rendimiento del activo en EUR
+    expect(p.returnPct).toBeCloseTo(0.05, 6); // rendimiento para la cartera en USD, incluyendo FX
   });
 });
 
@@ -235,6 +237,7 @@ describe("computePositions - retorno %", () => {
     expect(p.quantity).toBe(0); // cerrada: costBasisBase queda en 0
     expect(p.totalInvestedBase).toBeCloseTo(1000, 6); // pero el capital invertido no se pierde
     expect(p.totalReturnBase).toBeCloseTo(200, 6);
+    expect(p.returnPctLocal).toBeCloseTo(0.2, 6);
     expect(p.returnPct).toBeCloseTo(0.2, 6);
   });
 
@@ -243,6 +246,7 @@ describe("computePositions - retorno %", () => {
     const [p] = computePositions([tx({ type: "DIVIDEND", amount: 50 })], assets, new Map(), new Map());
     expect(p.totalInvestedBase).toBe(0);
     expect(p.totalReturnBase).toBeCloseTo(50, 6);
+    expect(p.returnPctLocal).toBeNull();
     expect(p.returnPct).toBeNull();
   });
 });
@@ -272,7 +276,13 @@ describe("computePortfolioSummary - retorno por moneda", () => {
 
     const usd = summary.returnByCurrency.find((c) => c.currencyCode === "USD")!;
     const cop = summary.returnByCurrency.find((c) => c.currencyCode === "COP")!;
+    expect(usd.marketValueLocal).toBeCloseTo(1100, 6);
+    expect(usd.costBasisLocal).toBeCloseTo(1000, 6);
+    expect(usd.totalReturnLocal).toBeCloseTo(100, 6);
     expect(usd.returnPct).toBeCloseTo(0.1, 6);
+    expect(cop.marketValueLocal).toBeCloseTo(1_200_000, 6);
+    expect(cop.costBasisLocal).toBeCloseTo(1_000_000, 6);
+    expect(cop.totalReturnLocal).toBeCloseTo(200_000, 6);
     expect(cop.returnPct).toBeCloseTo(0.2, 6);
   });
 });
