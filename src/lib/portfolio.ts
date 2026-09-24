@@ -34,6 +34,8 @@ export interface RawTransaction {
   fxFromAmount?: number | null;
   fxToCurrency?: string | null;
   fxToAmount?: number | null;
+  /** TRM oficial vigente en la fecha: pesos colombianos por 1 USD. */
+  trmToCop?: number | null;
 }
 
 export interface AssetInfo {
@@ -75,12 +77,18 @@ export interface AssetPosition {
   avgCostBase: number;
   costBasisLocal: number;
   costBasisBase: number;
+  /** Costo abierto de posiciones USD, convertido con la TRM de cada compra. */
+  costBasisCop: number | null;
+  /** TRM histórica promedio ponderada del costo que sigue abierto. */
+  avgPurchaseTrm: number | null;
 
   currentPriceLocal: number | null;
   currentFxRate: number | null;
   priceAsOf: Date | null;
   marketValueLocal: number | null;
   marketValueBase: number | null;
+  marketValueCop: number | null;
+  currentTrmToCop: number | null;
 
   unrealizedPnLLocal: number | null;
   unrealizedPnLBase: number | null;
@@ -91,6 +99,12 @@ export interface AssetPosition {
   realizedPnLBase: number;
   realizedLocalPerformanceBase: number;
   realizedFxEffectBase: number;
+
+  /** Efecto exclusivo USD/COP: movimiento del dólar, separado del desempeño del activo. */
+  unrealizedFxPnLCop: number | null;
+  realizedFxPnLCop: number | null;
+  totalFxPnLCop: number | null;
+  trmCoverageComplete: boolean;
 
   dividendsLocal: number;
   dividendsBase: number;
@@ -129,11 +143,15 @@ function emptyPosition(asset: AssetInfo): AssetPosition {
     avgCostBase: 0,
     costBasisLocal: 0,
     costBasisBase: 0,
+    costBasisCop: asset.currencyCode === "USD" ? 0 : null,
+    avgPurchaseTrm: null,
     currentPriceLocal: null,
     currentFxRate: null,
     priceAsOf: null,
     marketValueLocal: null,
     marketValueBase: null,
+    marketValueCop: null,
+    currentTrmToCop: null,
     unrealizedPnLLocal: null,
     unrealizedPnLBase: null,
     unrealizedLocalPerformanceBase: null,
@@ -142,6 +160,10 @@ function emptyPosition(asset: AssetInfo): AssetPosition {
     realizedPnLBase: 0,
     realizedLocalPerformanceBase: 0,
     realizedFxEffectBase: 0,
+    unrealizedFxPnLCop: null,
+    realizedFxPnLCop: asset.currencyCode === "USD" ? 0 : null,
+    totalFxPnLCop: null,
+    trmCoverageComplete: true,
     dividendsLocal: 0,
     dividendsBase: 0,
     feesLocal: 0,
@@ -169,6 +191,7 @@ export function computePositions(
   assets: Map<string, AssetInfo>,
   latestQuotes: Map<string, LatestQuote>,
   latestFxRates: Map<string, number>,
+  currentTrmToCop: number | null = null,
 ): AssetPosition[] {
   const positions = new Map<string, AssetPosition>();
   const byAsset = new Map<string, RawTransaction[]>();
@@ -227,6 +250,29 @@ export function computePositions(
           const proceedsLocal = S > 0 ? closingQty * price - closingCommission : closingQty * position.avgCostLocal;
           const costLocal = S > 0 ? closingQty * position.avgCostLocal : closingQty * price + closingCommission;
 
+          if (asset.currencyCode === "USD") {
+            const transactionTrm = tx.trmToCop;
+            const absQtyBefore = Math.abs(qtyBefore);
+            const avgCostCop =
+              position.costBasisCop != null && absQtyBefore > 0 ? position.costBasisCop / absQtyBefore : null;
+            if (
+              transactionTrm != null &&
+              avgCostCop != null &&
+              position.costBasisCop != null &&
+              position.realizedFxPnLCop != null
+            ) {
+              const realizedPnLCop =
+                S * closingQty * (price * transactionTrm - avgCostCop) - closingCommission * transactionTrm;
+              const localPerformanceCop = realizedPnLLocal * transactionTrm;
+              position.realizedFxPnLCop += realizedPnLCop - localPerformanceCop;
+              position.costBasisCop -= closingQty * avgCostCop;
+            } else {
+              position.costBasisCop = null;
+              position.realizedFxPnLCop = null;
+              position.trmCoverageComplete = false;
+            }
+          }
+
           position.quantity += S > 0 ? -closingQty : closingQty;
           position.costBasisLocal -= closingQty * position.avgCostLocal;
           position.costBasisBase -= closingQty * position.avgCostBase;
@@ -268,17 +314,31 @@ export function computePositions(
           position.costBasisBase += addedBasisLocal * tx.fxRateToBase;
           position.totalInvestedLocal += addedBasisLocal;
           position.totalInvestedBase += addedBasisLocal * tx.fxRateToBase;
+          if (asset.currencyCode === "USD") {
+            if (tx.trmToCop != null && position.costBasisCop != null) {
+              position.costBasisCop += addedBasisLocal * tx.trmToCop;
+            } else {
+              position.costBasisCop = null;
+              position.realizedFxPnLCop = null;
+              position.trmCoverageComplete = false;
+            }
+          }
         }
 
         if (Math.abs(position.quantity) <= 1e-9) {
           position.quantity = 0;
           position.costBasisLocal = 0;
           position.costBasisBase = 0;
+          if (position.costBasisCop != null) position.costBasisCop = 0;
         }
 
         const absQty = Math.abs(position.quantity);
         position.avgCostLocal = absQty > 0 ? position.costBasisLocal / absQty : 0;
         position.avgCostBase = absQty > 0 ? position.costBasisBase / absQty : 0;
+        position.avgPurchaseTrm =
+          asset.currencyCode === "USD" && position.costBasisCop != null && position.costBasisLocal > 0
+            ? position.costBasisCop / position.costBasisLocal
+            : null;
       } else if (tx.type === "DIVIDEND") {
         const gross = tx.amount ?? (tx.quantity ?? 0) * (tx.price ?? 0);
         const dividendLocal = gross - commission;
@@ -293,6 +353,7 @@ export function computePositions(
 
     const quote = latestQuotes.get(assetId);
     const fxRate = latestFxRates.get(asset.currencyCode);
+    if (asset.currencyCode === "USD") position.currentTrmToCop = currentTrmToCop;
     if (quote && fxRate !== undefined && position.quantity !== 0) {
       position.currentPriceLocal = quote.price;
       position.currentFxRate = fxRate;
@@ -306,6 +367,21 @@ export function computePositions(
       position.unrealizedPnLBase = position.quantity * (quote.price * fxRate - position.avgCostBase);
       position.unrealizedLocalPerformanceBase = position.unrealizedPnLLocal * fxRate;
       position.unrealizedFxEffectBase = position.unrealizedPnLBase - position.unrealizedLocalPerformanceBase;
+
+      if (asset.currencyCode === "USD") {
+        const absQty = Math.abs(position.quantity);
+        const avgCostCop =
+          position.costBasisCop != null && absQty > 0 ? position.costBasisCop / absQty : null;
+        if (currentTrmToCop != null && avgCostCop != null) {
+          position.marketValueCop = position.marketValueLocal * currentTrmToCop;
+          const unrealizedPnLCop =
+            position.quantity * (quote.price * currentTrmToCop - avgCostCop);
+          const localPerformanceCop = position.unrealizedPnLLocal * currentTrmToCop;
+          position.unrealizedFxPnLCop = unrealizedPnLCop - localPerformanceCop;
+        } else {
+          position.trmCoverageComplete = false;
+        }
+      }
     }
 
     position.totalReturnLocal =
@@ -321,6 +397,10 @@ export function computePositions(
     position.returnPctLocal =
       position.totalInvestedLocal > 0 ? position.totalReturnLocal / position.totalInvestedLocal : null;
     position.returnPct = position.totalInvestedBase > 0 ? position.totalReturnBase / position.totalInvestedBase : null;
+    if (asset.currencyCode === "USD" && position.realizedFxPnLCop != null) {
+      const openFx = position.quantity === 0 ? 0 : position.unrealizedFxPnLCop;
+      position.totalFxPnLCop = openFx != null ? position.realizedFxPnLCop + openFx : null;
+    }
 
     positions.set(assetId, position);
   }
@@ -393,6 +473,19 @@ export interface CurrencyReturn {
   returnPct: number | null;
 }
 
+export interface UsdCopFxSummary {
+  currentTrmToCop: number | null;
+  avgPurchaseTrm: number | null;
+  openCostUsd: number;
+  openCostCop: number | null;
+  marketValueCop: number | null;
+  unrealizedFxPnLCop: number | null;
+  realizedFxPnLCop: number | null;
+  totalFxPnLCop: number | null;
+  usdPositions: number;
+  missingTrmPositions: number;
+}
+
 export interface PortfolioSummary {
   totalMarketValueBase: number;
   totalCostBase: number;
@@ -412,6 +505,8 @@ export interface PortfolioSummary {
   totalReturnPct: number | null;
   /** Retorno % en su propia moneda de cada grupo de activos (p. ej. USD, COP), sin efecto cambiario. */
   returnByCurrency: CurrencyReturn[];
+  /** Ganancia/pérdida por la variación USD/COP, usando la TRM histórica de cada lote. */
+  usdCopFx: UsdCopFxSummary | null;
   positionsMissingPrice: number;
 }
 
@@ -498,6 +593,43 @@ export function computePortfolioSummary(positions: AssetPosition[], cashBalances
     }))
     .sort((a, b) => a.currencyCode.localeCompare(b.currencyCode));
 
+  const usdPositions = positions.filter((p) => p.currencyCode === "USD");
+  const openUsdPositions = usdPositions.filter((p) => p.quantity !== 0);
+  const allOpenCostsKnown = openUsdPositions.every((p) => p.costBasisCop != null);
+  const allOpenValuesKnown = openUsdPositions.every((p) => p.marketValueCop != null);
+  const allOpenFxKnown = openUsdPositions.every((p) => p.unrealizedFxPnLCop != null);
+  const allRealizedFxKnown = usdPositions.every((p) => p.realizedFxPnLCop != null);
+  const openCostUsd = openUsdPositions.reduce((sum, p) => sum + p.costBasisLocal, 0);
+  const openCostCop = allOpenCostsKnown
+    ? openUsdPositions.reduce((sum, p) => sum + (p.costBasisCop ?? 0), 0)
+    : null;
+  const unrealizedFxPnLCop = allOpenFxKnown
+    ? openUsdPositions.reduce((sum, p) => sum + (p.unrealizedFxPnLCop ?? 0), 0)
+    : null;
+  const realizedFxPnLCop = allRealizedFxKnown
+    ? usdPositions.reduce((sum, p) => sum + (p.realizedFxPnLCop ?? 0), 0)
+    : null;
+  const usdCopFx: UsdCopFxSummary | null =
+    usdPositions.length === 0
+      ? null
+      : {
+          currentTrmToCop: usdPositions.find((p) => p.currentTrmToCop != null)?.currentTrmToCop ?? null,
+          avgPurchaseTrm: openCostCop != null && openCostUsd > 0 ? openCostCop / openCostUsd : null,
+          openCostUsd,
+          openCostCop,
+          marketValueCop: allOpenValuesKnown
+            ? openUsdPositions.reduce((sum, p) => sum + (p.marketValueCop ?? 0), 0)
+            : null,
+          unrealizedFxPnLCop,
+          realizedFxPnLCop,
+          totalFxPnLCop:
+            unrealizedFxPnLCop != null && realizedFxPnLCop != null
+              ? unrealizedFxPnLCop + realizedFxPnLCop
+              : null,
+          usdPositions: usdPositions.length,
+          missingTrmPositions: usdPositions.filter((p) => !p.trmCoverageComplete).length,
+        };
+
   return {
     totalMarketValueBase,
     totalCostBase,
@@ -513,6 +645,7 @@ export function computePortfolioSummary(positions: AssetPosition[], cashBalances
     totalReturnFxEffectBase,
     totalReturnPct: totalInvestedBase > 0 ? totalReturnBase / totalInvestedBase : null,
     returnByCurrency,
+    usdCopFx,
     positionsMissingPrice,
   };
 }

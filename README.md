@@ -90,6 +90,12 @@ movimiento del tipo de cambio.
   usando el desempeño en moneda local de cada grupo de activos, sin el
   efecto cambiario — para responder "¿cómo les fue a mis dólares en dólares,
   y a mis pesos en pesos?" por separado.
+- **Efecto USD/COP por lote**: para las posiciones compradas en dólares, la
+  app toma la TRM vigente en la fecha de cada compra, calcula una TRM promedio
+  ponderada para el costo que sigue abierto y la compara con la TRM actual.
+  Muestra en COP la ganancia o pérdida atribuible exclusivamente al dólar,
+  separada del desempeño de la acción. Si falta parte del histórico, no estima
+  silenciosamente: marca la posición como incompleta y remite a cargar la TRM.
 - **Columnas personalizables**: el botón "Columnas" de la tabla de
   posiciones deja tildar o destildar qué columnas mostrar (cantidad, costo
   promedio, comisiones, dividendos, retorno %, etc.); la elección se guarda

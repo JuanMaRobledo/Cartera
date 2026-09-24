@@ -3,7 +3,7 @@
 import { prisma } from "./prisma";
 import { fetchYahooQuotes } from "./yahooFinance";
 import { computeFxRateFromTrm, fetchTrm } from "./trm";
-import { getAssetsMap, getLatestFxRates, getLatestQuotes, getRawTransactions } from "./data";
+import { getAssetsMap, getLatestFxRates, getLatestQuotes, getLatestTrm, getRawTransactions } from "./data";
 import { computeCashBalances, computeNetWorthBase, computePortfolioSummary, computePositions } from "./portfolio";
 
 export interface PriceRefreshResult {
@@ -89,14 +89,15 @@ export interface NetWorthSnapshotResult {
  * como desde "Actualizar precios" sin ensuciar el historial.
  */
 export async function snapshotNetWorth(): Promise<NetWorthSnapshotResult> {
-  const [transactions, assets, quotes, fxRates] = await Promise.all([
+  const [transactions, assets, quotes, fxRates, latestTrm] = await Promise.all([
     getRawTransactions(undefined),
     getAssetsMap(),
     getLatestQuotes(),
     getLatestFxRates(),
+    getLatestTrm(),
   ]);
 
-  const positions = computePositions(transactions, assets, quotes, fxRates);
+  const positions = computePositions(transactions, assets, quotes, fxRates, latestTrm?.value ?? null);
   const cashBalances = computeCashBalances(transactions, fxRates);
   const summary = computePortfolioSummary(positions, cashBalances);
   const netWorthBase = computeNetWorthBase(summary);

@@ -16,6 +16,36 @@ export interface TrmResult {
   validUntil: string;
 }
 
+export interface TrmPoint {
+  date: Date;
+  /** Pesos colombianos por 1 dólar estadounidense. */
+  value: number;
+}
+
+/**
+ * Resuelve la TRM vigente para una fecha: toma la última conocida en o antes
+ * de ese día. Tolera hasta siete días de separación para cubrir fines de
+ * semana y festivos; fuera de ese rango devuelve null para no presentar una
+ * TRM lejana como si correspondiera al día de la compra.
+ */
+export function resolveTrmNear(points: TrmPoint[], date: Date): number | null {
+  if (points.length === 0) return null;
+  const target = date.getTime();
+  let prior: TrmPoint | null = null;
+  let earliestAfter: TrmPoint | null = null;
+
+  for (const point of points) {
+    const time = point.date.getTime();
+    if (time <= target && (!prior || time > prior.date.getTime())) prior = point;
+    if (time > target && (!earliestAfter || time < earliestAfter.date.getTime())) earliestAfter = point;
+  }
+
+  const maxGapMs = 7 * 24 * 60 * 60 * 1000;
+  if (prior && target - prior.date.getTime() <= maxGapMs) return prior.value;
+  if (earliestAfter && earliestAfter.date.getTime() - target <= maxGapMs) return earliestAfter.value;
+  return null;
+}
+
 /** Extrae el valor de la TRM vigente de la respuesta cruda de datos.gov.co. */
 export function parseTrmResponse(rows: unknown): TrmResult | null {
   if (!Array.isArray(rows) || rows.length === 0) return null;

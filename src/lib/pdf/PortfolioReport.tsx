@@ -111,6 +111,32 @@ export function PortfolioReport({
   const currencyStats = summary.returnByCurrency.map((c) =>
     stat(`En ${c.currencyCode} (sin efecto cambiario)`, c.returnPct != null ? formatPercent(c.returnPct) : "—"),
   );
+  const usdCopFxStats = summary.usdCopFx
+    ? [
+        stat(
+          "TRM promedio de compra",
+          summary.usdCopFx.avgPurchaseTrm != null
+            ? `${summary.usdCopFx.avgPurchaseTrm.toLocaleString("es-CO", { maximumFractionDigits: 2 })} COP/USD`
+            : "—",
+        ),
+        stat(
+          "TRM actual",
+          summary.usdCopFx.currentTrmToCop != null
+            ? `${summary.usdCopFx.currentTrmToCop.toLocaleString("es-CO", { maximumFractionDigits: 2 })} COP/USD`
+            : "—",
+        ),
+        stat(
+          "Efecto USD/COP abierto",
+          summary.usdCopFx.unrealizedFxPnLCop != null
+            ? formatMoney(summary.usdCopFx.unrealizedFxPnLCop, "COP")
+            : "—",
+        ),
+        stat(
+          "Efecto USD/COP total",
+          summary.usdCopFx.totalFxPnLCop != null ? formatMoney(summary.usdCopFx.totalFxPnLCop, "COP") : "—",
+        ),
+      ]
+    : [];
 
   const headerRow = h(
     View,
@@ -159,6 +185,13 @@ export function PortfolioReport({
     children.push(
       h(Text, { key: "s2", style: styles.sectionTitle }, "Retorno % por moneda"),
       h(View, { key: "currencyStats", style: styles.statsRow }, currencyStats),
+    );
+  }
+
+  if (usdCopFxStats.length > 0) {
+    children.push(
+      h(Text, { key: "sfx", style: styles.sectionTitle }, "Efecto del dólar frente al peso"),
+      h(View, { key: "usdCopFxStats", style: styles.statsRow }, usdCopFxStats),
     );
   }
 

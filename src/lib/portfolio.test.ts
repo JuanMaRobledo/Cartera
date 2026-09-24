@@ -116,6 +116,73 @@ describe("computePositions - multi-currency: verdadera rentabilidad", () => {
   });
 });
 
+describe("computePositions - efecto USD/COP por TRM histórica", () => {
+  it("muestra pérdida cambiaria cuando la TRM actual es menor que la de compra", () => {
+    const assets = new Map([["a1", asset()]]);
+    const txs: RawTransaction[] = [
+      tx({ type: "BUY", quantity: 10, price: 100, trmToCop: 4000 }),
+    ];
+    const quotes = new Map<string, LatestQuote>([["a1", { price: 100, date: new Date("2024-06-01") }]]);
+
+    const [p] = computePositions(txs, assets, quotes, new Map([["USD", 1]]), 3800);
+
+    expect(p.costBasisCop).toBeCloseTo(4_000_000, 6);
+    expect(p.avgPurchaseTrm).toBeCloseTo(4000, 6);
+    expect(p.marketValueCop).toBeCloseTo(3_800_000, 6);
+    expect(p.unrealizedFxPnLCop).toBeCloseTo(-200_000, 6);
+    expect(p.totalFxPnLCop).toBeCloseTo(-200_000, 6);
+  });
+
+  it("pondera la TRM de varias compras por el costo USD de cada lote", () => {
+    const assets = new Map([["a1", asset()]]);
+    const txs: RawTransaction[] = [
+      tx({ type: "BUY", date: new Date("2024-01-01"), quantity: 10, price: 100, trmToCop: 4000 }),
+      tx({ type: "BUY", date: new Date("2024-02-01"), quantity: 10, price: 100, trmToCop: 4200 }),
+    ];
+    const quotes = new Map<string, LatestQuote>([["a1", { price: 100, date: new Date("2024-06-01") }]]);
+
+    const [p] = computePositions(txs, assets, quotes, new Map([["USD", 1]]), 3900);
+
+    expect(p.avgPurchaseTrm).toBeCloseTo(4100, 6);
+    expect(p.costBasisCop).toBeCloseTo(8_200_000, 6);
+    expect(p.unrealizedFxPnLCop).toBeCloseTo(-400_000, 6);
+  });
+
+  it("separa el movimiento del activo del efecto del dólar", () => {
+    const assets = new Map([["a1", asset()]]);
+    const txs: RawTransaction[] = [
+      tx({ type: "BUY", quantity: 10, price: 100, trmToCop: 4000 }),
+    ];
+    const quotes = new Map<string, LatestQuote>([["a1", { price: 110, date: new Date("2024-06-01") }]]);
+
+    const [p] = computePositions(txs, assets, quotes, new Map([["USD", 1]]), 3800);
+
+    // Ganancia del activo: USD 100 × 3.800 = COP 380.000.
+    // Pérdida cambiaria sobre el costo de USD 1.000: (3.800 - 4.000) × 1.000 = -COP 200.000.
+    // Resultado conjunto en COP: +180.000.
+    expect(p.unrealizedPnLLocal).toBeCloseTo(100, 6);
+    expect(p.unrealizedFxPnLCop).toBeCloseTo(-200_000, 6);
+    expect(p.marketValueCop! - p.costBasisCop!).toBeCloseTo(180_000, 6);
+  });
+
+  it("marca el cálculo como incompleto si falta la TRM histórica", () => {
+    const assets = new Map([["a1", asset()]]);
+    const quotes = new Map<string, LatestQuote>([["a1", { price: 100, date: new Date("2024-06-01") }]]);
+
+    const [p] = computePositions(
+      [tx({ type: "BUY", quantity: 10, price: 100, trmToCop: null })],
+      assets,
+      quotes,
+      new Map([["USD", 1]]),
+      3900,
+    );
+
+    expect(p.trmCoverageComplete).toBe(false);
+    expect(p.avgPurchaseTrm).toBeNull();
+    expect(p.totalFxPnLCop).toBeNull();
+  });
+});
+
 describe("computePositions - posiciones cortas", () => {
   it("vender sin tener el activo abre un corto (ya no se recorta la cantidad)", () => {
     const assets = new Map([["a1", asset()]]);
@@ -260,7 +327,15 @@ describe("computePortfolioSummary - retorno por moneda", () => {
       ["a2", copAsset],
     ]);
     const txs: RawTransaction[] = [
-      tx({ assetId: "a1", type: "BUY", currencyCode: "USD", fxRateToBase: 1, quantity: 10, price: 100 }),
+      tx({
+        assetId: "a1",
+        type: "BUY",
+        currencyCode: "USD",
+        fxRateToBase: 1,
+        quantity: 10,
+        price: 100,
+        trmToCop: 4000,
+      }),
       tx({ assetId: "a2", type: "BUY", currencyCode: "COP", fxRateToBase: 0.00025, quantity: 1000, price: 1000 }),
     ];
     const quotes = new Map<string, LatestQuote>([
@@ -271,7 +346,7 @@ describe("computePortfolioSummary - retorno por moneda", () => {
       ["USD", 1],
       ["COP", 0.00025],
     ]);
-    const positions = computePositions(txs, assets, quotes, fx);
+    const positions = computePositions(txs, assets, quotes, fx, 3900);
     const summary = computePortfolioSummary(positions, []);
 
     const usd = summary.returnByCurrency.find((c) => c.currencyCode === "USD")!;
@@ -284,6 +359,9 @@ describe("computePortfolioSummary - retorno por moneda", () => {
     expect(cop.costBasisLocal).toBeCloseTo(1_000_000, 6);
     expect(cop.totalReturnLocal).toBeCloseTo(200_000, 6);
     expect(cop.returnPct).toBeCloseTo(0.2, 6);
+    expect(summary.usdCopFx?.avgPurchaseTrm).toBeCloseTo(4000, 6);
+    expect(summary.usdCopFx?.currentTrmToCop).toBeCloseTo(3900, 6);
+    expect(summary.usdCopFx?.unrealizedFxPnLCop).toBeCloseTo(-100_000, 6);
   });
 });
 
