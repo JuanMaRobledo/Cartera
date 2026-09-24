@@ -109,6 +109,8 @@ export interface AssetPosition {
   totalReturnBase: number;
   totalReturnLocalPerformanceBase: number;
   totalReturnFxEffectBase: number;
+  /** totalReturnLocal / totalInvestedLocal: retorno del activo en la moneda en que cotiza/se compró, sin efecto cambiario. */
+  returnPctLocal: number | null;
   /** totalReturnBase / totalInvestedBase, o null si nunca se invirtió nada (p. ej. solo dividendos). */
   returnPct: number | null;
 
@@ -150,6 +152,7 @@ function emptyPosition(asset: AssetInfo): AssetPosition {
     totalReturnBase: 0,
     totalReturnLocalPerformanceBase: 0,
     totalReturnFxEffectBase: 0,
+    returnPctLocal: null,
     returnPct: null,
     lots: [],
   };
@@ -315,6 +318,8 @@ export function computePositions(
       position.dividendsBase -
       position.feesBase;
     position.totalReturnFxEffectBase = position.realizedFxEffectBase + (position.unrealizedFxEffectBase ?? 0);
+    position.returnPctLocal =
+      position.totalInvestedLocal > 0 ? position.totalReturnLocal / position.totalInvestedLocal : null;
     position.returnPct = position.totalInvestedBase > 0 ? position.totalReturnBase / position.totalInvestedBase : null;
 
     positions.set(assetId, position);
@@ -376,7 +381,13 @@ export function computeCashBalances(
 
 export interface CurrencyReturn {
   currencyCode: string;
+  marketValueLocal: number;
+  costBasisLocal: number;
   totalInvestedLocal: number;
+  unrealizedPnLLocal: number;
+  realizedPnLLocal: number;
+  dividendsLocal: number;
+  feesLocal: number;
   totalReturnLocal: number;
   /** totalReturnLocal / totalInvestedLocal: cuánto rindieron en su propia moneda los activos de esta moneda, sin efecto cambiario. */
   returnPct: number | null;
@@ -417,7 +428,19 @@ export function computePortfolioSummary(positions: AssetPosition[], cashBalances
   let totalReturnFxEffectBase = 0;
   let positionsMissingPrice = 0;
 
-  const byCurrency = new Map<string, { totalInvestedLocal: number; totalReturnLocal: number }>();
+  const byCurrency = new Map<
+    string,
+    {
+      marketValueLocal: number;
+      costBasisLocal: number;
+      totalInvestedLocal: number;
+      unrealizedPnLLocal: number;
+      realizedPnLLocal: number;
+      dividendsLocal: number;
+      feesLocal: number;
+      totalReturnLocal: number;
+    }
+  >();
 
   for (const p of positions) {
     if (p.quantity !== 0 && p.marketValueBase == null) positionsMissingPrice += 1;
@@ -432,8 +455,23 @@ export function computePortfolioSummary(positions: AssetPosition[], cashBalances
     totalReturnLocalPerformanceBase += p.totalReturnLocalPerformanceBase;
     totalReturnFxEffectBase += p.totalReturnFxEffectBase;
 
-    const entry = byCurrency.get(p.currencyCode) ?? { totalInvestedLocal: 0, totalReturnLocal: 0 };
+    const entry = byCurrency.get(p.currencyCode) ?? {
+      marketValueLocal: 0,
+      costBasisLocal: 0,
+      totalInvestedLocal: 0,
+      unrealizedPnLLocal: 0,
+      realizedPnLLocal: 0,
+      dividendsLocal: 0,
+      feesLocal: 0,
+      totalReturnLocal: 0,
+    };
+    entry.marketValueLocal += p.marketValueLocal ?? 0;
+    entry.costBasisLocal += p.costBasisLocal;
     entry.totalInvestedLocal += p.totalInvestedLocal;
+    entry.unrealizedPnLLocal += p.unrealizedPnLLocal ?? 0;
+    entry.realizedPnLLocal += p.realizedPnLLocal;
+    entry.dividendsLocal += p.dividendsLocal;
+    entry.feesLocal += p.feesLocal;
     entry.totalReturnLocal += p.totalReturnLocal;
     byCurrency.set(p.currencyCode, entry);
   }
@@ -452,11 +490,11 @@ export function computePortfolioSummary(positions: AssetPosition[], cashBalances
   );
 
   const returnByCurrency: CurrencyReturn[] = [...byCurrency.entries()]
-    .map(([currencyCode, { totalInvestedLocal, totalReturnLocal }]) => ({
+    .map(([currencyCode, totals]) => ({
       currencyCode,
-      totalInvestedLocal,
-      totalReturnLocal,
-      returnPct: totalInvestedLocal > 0 ? totalReturnLocal / totalInvestedLocal : null,
+      ...totals,
+      returnPct:
+        totals.totalInvestedLocal > 0 ? totals.totalReturnLocal / totals.totalInvestedLocal : null,
     }))
     .sort((a, b) => a.currencyCode.localeCompare(b.currencyCode));
 
