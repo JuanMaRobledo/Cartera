@@ -27,7 +27,7 @@ function LoginForm() {
         return;
       }
       const next = searchParams.get("next");
-      const destination = next?.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\")
+      const destination = next?.startsWith("/") && !next.startsWith("//") && !next.includes("\\")
         ? next
         : "/";
       window.location.assign(destination);

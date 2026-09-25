@@ -9,6 +9,9 @@ import { SESSION_COOKIE, isValidSession } from "@/lib/auth";
  * valida su propio CRON_SECRET (Vercel la llama sin la cookie de sesión).
  */
 export function proxy(request: NextRequest) {
+  if (process.env.NODE_ENV === "production" && !process.env.APP_PASSWORD) {
+    return NextResponse.json({ error: "El acceso privado no está configurado" }, { status: 503 });
+  }
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   if (isValidSession(token)) {
     return NextResponse.next();
@@ -19,12 +22,12 @@ export function proxy(request: NextRequest) {
   }
 
   const loginUrl = new URL("/login", request.url);
-  loginUrl.searchParams.set("next", request.nextUrl.pathname);
+  loginUrl.searchParams.set("next", request.nextUrl.pathname + request.nextUrl.search);
   return NextResponse.redirect(loginUrl);
 }
 
 export const config = {
   matcher: [
-    "/((?!login|api/login|api/cron|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|offline.html|icons/|jmr-roble-foso-mobile.png).*)",
+    "/((?!login|api/login|api/sso/verify|api/cron|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|offline.html|icons/|jmr-roble-foso-mobile.png).*)",
   ],
 };

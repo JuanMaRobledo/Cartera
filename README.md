@@ -115,12 +115,19 @@ movimiento del tipo de cambio.
   `/api/cron/*` que usa su propio `CRON_SECRET`) queda detrás de las
   credenciales definidas en `APP_USERNAME` y `APP_PASSWORD`. Si no se define
   `APP_USERNAME`, se usa `juan0804`. Sin `APP_PASSWORD`
-  configurada la app queda abierta (para no exigir setup en desarrollo
-  local); en producción hay que definirla en Vercel para que esto proteja
-  algo — ver la sección de despliegue más abajo. El gatekeeper vive en
+  configurada la app queda abierta solo en desarrollo local; en producción
+  responde 503. El gatekeeper vive en
   `src/proxy.ts` (Proxy/Middleware de Next.js) y la sesión es una cookie
   `HttpOnly` con el hash de la contraseña, nunca la contraseña en texto
   plano.
+- **Acceso único a las tres aplicaciones**: desde esta portada se emite un
+  código de 45 segundos, de un solo uso, para Modelo JMR o Presupuesto. La
+  aplicación de destino lo verifica en `/api/sso/verify` y crea su propia
+  sesión privada. Un enlace directo al destino regresa a este mismo login y
+  vuelve a la página solicitada. `APP_USERNAME` y `APP_PASSWORD` de Cartera
+  definen las credenciales de ingreso; Modelo y Presupuesto solo necesitan
+  su `APP_PASSWORD` local para firmar sesiones (puede ser distinto).
+  Presupuesto sigue solicitando autorización de Google para leer Sheets.
 - **Freno a fuerza bruta en el login**: `/api/login` cuenta los intentos
   fallidos por IP en la tabla `LoginAttempt` (Postgres, porque serverless no
   tiene memoria compartida entre invocaciones). Los primeros 5 intentos son
@@ -179,9 +186,8 @@ fijo:
      cualquiera desde internet).
    - `APP_USERNAME` con el usuario que vas a usar para entrar (si se omite,
      será `JuanMaRobledo`).
-   - `APP_PASSWORD` con la contraseña que vas a usar para entrar a la app —
-     **sin esta variable la app queda públicamente accesible para cualquiera
-     que tenga la URL**, sin login de ningún tipo.
+   - `APP_PASSWORD` con la contraseña que vas a usar para entrar a la app.
+     En producción es obligatoria: si falta, el servidor responde 503.
 4. Hacé clic en **Deploy**. Vercel instala las dependencias, crea las
    tablas en la base (`prisma db push`, corre solo como parte del build) y
    compila la app. Al terminar te da una URL fija
