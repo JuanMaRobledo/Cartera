@@ -324,7 +324,7 @@ export default function DashboardPage() {
       {
         key: "dividendos",
         label: "Dividendos",
-        defaultVisible: false,
+        defaultVisible: true,
         render: (p) =>
           formatMoney(
             showPurchaseCurrency
@@ -336,7 +336,7 @@ export default function DashboardPage() {
       {
         key: "comisiones",
         label: "Comisiones",
-        defaultVisible: false,
+        defaultVisible: true,
         render: (p) =>
           formatMoney(
             showPurchaseCurrency
@@ -391,7 +391,7 @@ export default function DashboardPage() {
       {
         key: "valorCop",
         label: "Valor actual COP",
-        defaultVisible: false,
+        defaultVisible: true,
         render: (p) =>
           p.currencyCode === "USD" && p.marketValueCop != null
             ? formatMoney(p.marketValueCop, "COP")
@@ -461,7 +461,7 @@ export default function DashboardPage() {
     ],
     [consolidatedCurrency, currentTrmForColumns, selectedMarketForColumns, showPurchaseCurrency],
   );
-  const [visibleColumns, toggleColumn] = useVisibleColumns("cartera:columnas-posiciones", columns);
+  const [visibleColumns, toggleColumn, showAllColumns] = useVisibleColumns("cartera:columnas-posiciones", columns);
   const shownColumns = columns.filter((c) => visibleColumns.has(c.key));
 
   if (error) return <p className="loss-text">{error}</p>;
@@ -480,6 +480,17 @@ export default function DashboardPage() {
     }
     return true;
   });
+  const openPositionGroups = [
+    { currencyCode: "COP", label: "Inversiones en pesos (COP)", positions: openPositions.filter((p) => p.currencyCode === "COP") },
+    { currencyCode: "USD", label: "Inversiones en dólares (USD)", positions: openPositions.filter((p) => p.currencyCode === "USD") },
+    ...currencyOptions
+      .filter((currency) => currency !== "COP" && currency !== "USD")
+      .map((currency) => ({
+        currencyCode: currency,
+        label: `Inversiones en ${currency}`,
+        positions: openPositions.filter((p) => p.currencyCode === currency),
+      })),
+  ];
   const selectedPositions = openPositions.filter(
     (position) => selectedAssetIds == null || selectedAssetIds.has(position.assetId),
   );
@@ -675,7 +686,7 @@ export default function DashboardPage() {
   ).map(([name, value]) => ({ name, value }));
 
   return (
-    <div className="space-y-6">
+    <div className="portfolio-dashboard space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Panel de cartera</h1>
@@ -1034,11 +1045,11 @@ export default function DashboardPage() {
         <AllocationDonut data={allocationByType} baseCurrency={selectedCurrency} />
       </div>
 
-      <div className="card overflow-x-auto">
+      <div className="card">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-medium">Posiciones abiertas</h2>
-            <p className="text-xs text-slate-500">Marca cada activo para incluirlo en cálculos y gráficas.</p>
+            <p className="text-xs text-slate-500">Separadas por moneda. Marca cada activo para incluirlo en cálculos y gráficas.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <input className="input w-44" placeholder="Buscar activo…" value={searchFilter} onChange={(e) => setSearchFilter(e.target.value)} aria-label="Buscar activo" />
@@ -1059,40 +1070,54 @@ export default function DashboardPage() {
                 </option>
               ))}
             </select>
-            <ColumnPicker columns={columns} visible={visibleColumns} onToggle={toggleColumn} />
+            <ColumnPicker columns={columns} visible={visibleColumns} onToggle={toggleColumn} onShowAll={showAllColumns} />
           </div>
         </div>
-        {openPositions.length === 0 ? (
-          <p className="text-sm text-slate-500">Todavía no tenés posiciones abiertas.</p>
-        ) : (
-          <table className="table-base">
-            <thead>
-              <tr>
-                <th>Incluir</th>
-                {shownColumns.map((c) => (
-                  <th key={c.key}>{c.label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {openPositions.map((p) => (
-                <tr key={p.assetId}>
-                  <td>
-                    <input
-                      type="checkbox"
-                      checked={selectedAssetIds == null || selectedAssetIds.has(p.assetId)}
-                      onChange={() => toggleAsset(p.assetId)}
-                      aria-label={`Incluir ${p.ticker} en la selección`}
-                    />
-                  </td>
-                  {shownColumns.map((c) => (
-                    <td key={c.key}>{c.render(p)}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <div className="space-y-6">
+          {openPositionGroups.map((group) => (
+            <section key={group.currencyCode} aria-label={group.label}>
+              <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+                <h3 className="font-semibold text-[#314a35]">{group.label}</h3>
+                <span className="text-xs text-slate-500">{group.positions.length} activo(s)</span>
+              </div>
+              {group.positions.length === 0 ? (
+                <p className="rounded-lg border border-[#eadfce] px-3 py-3 text-sm text-slate-500">
+                  Sin posiciones abiertas con los filtros actuales.
+                </p>
+              ) : (
+                <div className="overflow-x-auto overscroll-x-contain rounded-lg border border-[#eadfce]">
+                  <table className="table-base portfolio-positions-table">
+                    <thead>
+                      <tr>
+                        <th>Incluir</th>
+                        {shownColumns.map((c) => (
+                          <th key={c.key}>{c.label}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.positions.map((p) => (
+                        <tr key={p.assetId}>
+                          <td>
+                            <input
+                              type="checkbox"
+                              checked={selectedAssetIds == null || selectedAssetIds.has(p.assetId)}
+                              onChange={() => toggleAsset(p.assetId)}
+                              aria-label={`Incluir ${p.ticker} en la selección`}
+                            />
+                          </td>
+                          {shownColumns.map((c) => (
+                            <td key={c.key}>{c.render(p)}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          ))}
+        </div>
       </div>
 
       {closedPositions.length > 0 && (

@@ -99,6 +99,35 @@ body {
   background: rgba(226, 210, 184, 0.2);
 }
 
+@media (min-width: 1024px) {
+  main:has(> .portfolio-dashboard) {
+    max-width: 120rem;
+    width: 100%;
+    padding-right: clamp(1rem, 2vw, 2.5rem);
+    padding-left: clamp(1rem, 2vw, 2.5rem);
+  }
+}
+
+.portfolio-positions-table {
+  min-width: 100%;
+  width: max-content;
+  font-size: 0.8rem;
+}
+
+.portfolio-positions-table th,
+.portfolio-positions-table td {
+  padding: 0.55rem 0.6rem;
+  white-space: nowrap;
+}
+
+.portfolio-positions-table th:first-child,
+.portfolio-positions-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--jmr-surface);
+}
+
 .gain-text {
   @apply text-gain;
 }
