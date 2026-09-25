@@ -2,12 +2,11 @@
 
 import Image from "next/image";
 import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const [username, setUsername] = useState("juan0804");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -23,12 +22,17 @@ function LoginForm() {
         body: JSON.stringify({ username, password }),
       });
       if (!res.ok) {
-        setError((await res.json()).error ?? "Error al iniciar sesión");
+        const result = await res.json().catch(() => null);
+        setError(result?.error ?? "No se pudo iniciar sesión. Inténtalo de nuevo.");
         return;
       }
-      const next = searchParams.get("next") || "/";
-      router.push(next);
-      router.refresh();
+      const next = searchParams.get("next");
+      const destination = next?.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\")
+        ? next
+        : "/";
+      window.location.assign(destination);
+    } catch {
+      setError("No se pudo conectar con la plataforma. Comprueba tu conexión e inténtalo de nuevo.");
     } finally {
       setSubmitting(false);
     }
@@ -38,7 +42,8 @@ function LoginForm() {
     <form onSubmit={submit} className="card space-y-4">
       <div>
         <label className="label" htmlFor="username">Usuario</label>
-        <input id="username" name="username" type="text" className="input" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" autoCapitalize="none" autoFocus required />
+        <input id="username" name="username" type="text" className="input" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" autoCapitalize="none" spellCheck={false} autoFocus required />
+        <p className="mt-1 text-xs text-slate-500">Escribe el usuario que configuraste para esta plataforma.</p>
       </div>
       <div>
         <label className="label" htmlFor="password">Contraseña</label>
