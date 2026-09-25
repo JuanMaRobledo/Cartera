@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import type { ReactNode } from "react";
+import type { SortValue } from "@/lib/sortRows";
 
 export interface ColumnDef<T> {
   key: string;
   label: string;
   defaultVisible: boolean;
   render: (row: T) => ReactNode;
+  /** Valor por el que se ordena la columna (el mismo número que muestra `render`). Sin esto, la columna no se ordena. */
+  sortValue?: (row: T) => SortValue;
 }
 
 /**
