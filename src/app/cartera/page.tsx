@@ -8,6 +8,8 @@ import { PerformanceBreakdownChart } from "@/components/charts/PerformanceBreakd
 import { NetWorthHistoryChart, type NetWorthPoint } from "@/components/charts/NetWorthHistoryChart";
 import { AssetReturnsChart } from "@/components/charts/AssetReturnsChart";
 import { ColumnPicker, useVisibleColumns, type ColumnDef } from "@/components/ColumnPicker";
+import { SortableTh, useSortState } from "@/components/SortableTh";
+import { sortRows } from "@/lib/sortRows";
 import { xirr } from "@/lib/portfolio";
 
 interface PositionCashFlowDto {
@@ -216,12 +218,19 @@ export default function DashboardPage() {
       0,
     );
 
-  const columns = useMemo<ColumnDef<PositionDto>[]>(
-    () => [
+  const columns = useMemo<ColumnDef<PositionDto>[]>(() => {
+    // Monto en la moneda que se está mostrando: la de compra, o USD/COP
+    // consolidado. Es el mismo número que muestran las celdas, para ordenar.
+    const shownAmount = (value: number | null, p: PositionDto) =>
+      showPurchaseCurrency
+        ? value
+        : convertLocalAmount(value, p.currencyCode, consolidatedCurrency, currentTrmForColumns);
+    return [
       {
         key: "activo",
         label: "Activo",
         defaultVisible: true,
+        sortValue: (p) => p.ticker,
         render: (p) => (
           <>
             <div className="font-medium">{p.ticker}</div>
@@ -233,13 +242,21 @@ export default function DashboardPage() {
         key: "tipo",
         label: "Tipo",
         defaultVisible: true,
+        sortValue: (p) => ASSET_TYPE_LABELS[p.assetType as keyof typeof ASSET_TYPE_LABELS] ?? p.assetType,
         render: (p) => ASSET_TYPE_LABELS[p.assetType as keyof typeof ASSET_TYPE_LABELS] ?? p.assetType,
       },
-      { key: "cantidad", label: "Cantidad", defaultVisible: true, render: (p) => (p.quantity !== 0 ? p.quantity : "—") },
+      {
+        key: "cantidad",
+        label: "Cantidad",
+        defaultVisible: true,
+        sortValue: (p) => (p.quantity !== 0 ? p.quantity : null),
+        render: (p) => (p.quantity !== 0 ? p.quantity : "—"),
+      },
       {
         key: "peso",
         label: "% Cartera",
         defaultVisible: true,
+        sortValue: (p) => convertLocalAmount(p.marketValueLocal, p.currencyCode, consolidatedCurrency, currentTrmForColumns),
         render: (p) => {
           const value = convertLocalAmount(
             p.marketValueLocal,
@@ -256,6 +273,7 @@ export default function DashboardPage() {
         key: "costoProm",
         label: "Costo prom.",
         defaultVisible: true,
+        sortValue: (p) => (p.quantity !== 0 ? shownAmount(p.avgCostLocal, p) : null),
         render: (p) => {
           const value = showPurchaseCurrency
             ? p.avgCostLocal
@@ -269,6 +287,7 @@ export default function DashboardPage() {
         key: "precioActual",
         label: "Precio actual",
         defaultVisible: true,
+        sortValue: (p) => shownAmount(p.currentPriceLocal, p),
         render: (p) => {
           const value = showPurchaseCurrency
             ? p.currentPriceLocal
@@ -280,6 +299,7 @@ export default function DashboardPage() {
         key: "valorMercado",
         label: "Valor mercado",
         defaultVisible: true,
+        sortValue: (p) => shownAmount(p.marketValueLocal, p),
         render: (p) => {
           const value = showPurchaseCurrency
             ? p.marketValueLocal
@@ -293,6 +313,7 @@ export default function DashboardPage() {
         key: "noRealizada",
         label: "No realizada",
         defaultVisible: true,
+        sortValue: (p) => shownAmount(p.unrealizedPnLLocal, p),
         render: (p) => {
           const value = showPurchaseCurrency
             ? p.unrealizedPnLLocal
@@ -310,6 +331,7 @@ export default function DashboardPage() {
         key: "realizada",
         label: "Realizada",
         defaultVisible: true,
+        sortValue: (p) => shownAmount(p.realizedPnLLocal, p),
         render: (p) => {
           const value = showPurchaseCurrency
             ? p.realizedPnLLocal
@@ -325,6 +347,7 @@ export default function DashboardPage() {
         key: "dividendos",
         label: "Dividendos",
         defaultVisible: true,
+        sortValue: (p) => shownAmount(p.dividendsLocal, p),
         render: (p) =>
           formatMoney(
             showPurchaseCurrency
@@ -337,6 +360,7 @@ export default function DashboardPage() {
         key: "comisiones",
         label: "Comisiones",
         defaultVisible: true,
+        sortValue: (p) => shownAmount(p.feesLocal, p),
         render: (p) =>
           formatMoney(
             showPurchaseCurrency
@@ -349,6 +373,7 @@ export default function DashboardPage() {
         key: "retornoTotal",
         label: "Retorno total",
         defaultVisible: true,
+        sortValue: (p) => (showPurchaseCurrency ? p.totalReturnLocal : flowReturnStats(p, consolidatedCurrency).amount),
         render: (p) => {
           const value = showPurchaseCurrency ? p.totalReturnLocal : flowReturnStats(p, consolidatedCurrency).amount;
           return (
@@ -362,6 +387,7 @@ export default function DashboardPage() {
         key: "retornoPct",
         label: "Retorno %",
         defaultVisible: true,
+        sortValue: (p) => (showPurchaseCurrency ? p.returnPctLocal : flowReturnStats(p, consolidatedCurrency).pct),
         render: (p) => {
           const value = showPurchaseCurrency ? p.returnPctLocal : flowReturnStats(p, consolidatedCurrency).pct;
           return value != null ? <span className={signClass(value)}>{formatPercent(value)}</span> : "—";
@@ -371,6 +397,10 @@ export default function DashboardPage() {
         key: "retornoAnual",
         label: "Rentabilidad anual",
         defaultVisible: true,
+        sortValue: (p) =>
+          showPurchaseCurrency || (p.currencyCode !== "USD" && p.currencyCode !== "COP")
+            ? null
+            : flowReturnStats(p, consolidatedCurrency).annualized,
         render: (p) => {
           if (showPurchaseCurrency || (p.currencyCode !== "USD" && p.currencyCode !== "COP")) return "—";
           const value = flowReturnStats(p, consolidatedCurrency).annualized;
@@ -381,6 +411,7 @@ export default function DashboardPage() {
         key: "trmCompra",
         label: "TRM compra",
         defaultVisible: true,
+        sortValue: (p) => (p.currencyCode === "USD" ? p.avgPurchaseTrm : null),
         render: (p) =>
           p.currencyCode === "USD"
             ? p.avgPurchaseTrm != null
@@ -392,6 +423,7 @@ export default function DashboardPage() {
         key: "valorCop",
         label: "Valor actual COP",
         defaultVisible: true,
+        sortValue: (p) => (p.currencyCode === "USD" ? p.marketValueCop : null),
         render: (p) =>
           p.currencyCode === "USD" && p.marketValueCop != null
             ? formatMoney(p.marketValueCop, "COP")
@@ -401,6 +433,7 @@ export default function DashboardPage() {
         key: "efectoDolarCop",
         label: "Efecto dólar COP",
         defaultVisible: true,
+        sortValue: (p) => (p.currencyCode === "USD" ? p.totalFxPnLCop : null),
         render: (p) => {
           if (p.currencyCode !== "USD") return "—";
           if (p.totalFxPnLCop == null) return <span className="text-xs text-amber-700">TRM incompleta</span>;
@@ -429,6 +462,10 @@ export default function DashboardPage() {
         key: "localVsFx",
         label: showPurchaseCurrency ? "Criterio" : "Local vs. FX",
         defaultVisible: true,
+        sortValue: (p) =>
+          showPurchaseCurrency
+            ? null
+            : convertLocalAmount(p.totalReturnLocal, p.currencyCode, consolidatedCurrency, currentTrmForColumns),
         render: (p) =>
           showPurchaseCurrency ? (
             <span className="text-xs text-slate-500">
@@ -458,11 +495,27 @@ export default function DashboardPage() {
             })()
           ),
       },
-    ],
-    [consolidatedCurrency, currentTrmForColumns, selectedMarketForColumns, showPurchaseCurrency],
-  );
+    ];
+  }, [consolidatedCurrency, currentTrmForColumns, selectedMarketForColumns, showPurchaseCurrency]);
   const [visibleColumns, toggleColumn, showAllColumns] = useVisibleColumns("cartera:columnas-posiciones", columns);
   const shownColumns = columns.filter((c) => visibleColumns.has(c.key));
+  const [sort, toggleSort] = useSortState("cartera:orden-posiciones");
+  const sortColumn = sort ? columns.find((c) => c.key === sort.key && c.sortValue) : undefined;
+  const sortPositions = (list: PositionDto[]) =>
+    sort && sortColumn?.sortValue ? sortRows(list, sortColumn.sortValue, sort.direction) : list;
+  const headerFor = (c: ColumnDef<PositionDto>) =>
+    c.sortValue ? (
+      <SortableTh
+        key={c.key}
+        label={c.label}
+        columnKey={c.key}
+        sort={sort}
+        firstDirection={c.key === "activo" || c.key === "tipo" ? "asc" : "desc"}
+        onSort={toggleSort}
+      />
+    ) : (
+      <th key={c.key}>{c.label}</th>
+    );
 
   if (error) return <p className="loss-text">{error}</p>;
   if (!data) return <p className="text-slate-500">Cargando…</p>;
@@ -1090,13 +1143,11 @@ export default function DashboardPage() {
                     <thead>
                       <tr>
                         <th>Incluir</th>
-                        {shownColumns.map((c) => (
-                          <th key={c.key}>{c.label}</th>
-                        ))}
+                        {shownColumns.map(headerFor)}
                       </tr>
                     </thead>
                     <tbody>
-                      {group.positions.map((p) => (
+                      {sortPositions(group.positions).map((p) => (
                         <tr key={p.assetId}>
                           <td>
                             <input
@@ -1125,14 +1176,10 @@ export default function DashboardPage() {
           <summary className="cursor-pointer font-medium">Posiciones cerradas ({closedPositions.length})</summary>
           <table className="table-base mt-3">
             <thead>
-              <tr>
-                {shownColumns.map((c) => (
-                  <th key={c.key}>{c.label}</th>
-                ))}
-              </tr>
+              <tr>{shownColumns.map(headerFor)}</tr>
             </thead>
             <tbody>
-              {closedPositions.map((p) => (
+              {sortPositions(closedPositions).map((p) => (
                 <tr key={p.assetId}>
                   {shownColumns.map((c) => (
                     <td key={c.key}>{c.render(p)}</td>
