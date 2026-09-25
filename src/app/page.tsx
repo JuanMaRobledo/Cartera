@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import { InstallAppCard } from "@/components/InstallAppCard";
 
 const apps = [
@@ -17,21 +16,21 @@ const apps = [
     name: "Modelo JMR",
     description:
       "Valoración empresarial, research fundamental y seguimiento disciplinado de tesis.",
-    href: "https://modelo-jmr.vercel.app",
+    href: "/api/sso/start?app=modelo",
     action: "Abrir modelo",
     category: "Análisis",
     logo: "/app-logos/modelo-jmr.svg",
-    external: true,
+    external: false,
   },
   {
     name: "Presupuesto",
     description:
       "Cuentas, tarjetas, deudas, flujo de caja y patrimonio personal bajo control.",
-    href: "https://juanmarobledo.github.io/presupuesto-app-web/",
+    href: "/api/sso/start?app=presupuesto",
     action: "Abrir presupuesto",
     category: "Finanzas personales",
     logo: "/app-logos/presupuesto.svg",
-    external: true,
+    external: false,
   },
 ] as const;
 
@@ -153,21 +152,7 @@ export default function AppsHomePage() {
               const className =
                 "group relative flex min-h-[21rem] flex-col overflow-hidden rounded-2xl border border-[#d9d4c8] bg-[linear-gradient(145deg,#ffffff_0%,#ffffff_62%,#f8f3e9_100%)] p-6 shadow-[0_8px_24px_rgba(32,38,35,0.06)] transition duration-300 hover:-translate-y-1.5 hover:border-[#b6a27b] hover:shadow-[0_20px_42px_rgba(32,38,35,0.12)] focus:outline-none focus:ring-2 focus:ring-[#8c774f] focus:ring-offset-2";
 
-              return app.external ? (
-                <a
-                  key={app.name}
-                  href={app.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={className}
-                >
-                  {card}
-                </a>
-              ) : (
-                <Link key={app.name} href={app.href} className={className}>
-                  {card}
-                </Link>
-              );
+              return <a key={app.name} href={app.href} className={className}>{card}</a>;
             })}
           </div>
         </div>
