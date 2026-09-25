@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 
 const THRESHOLD = 5; // intentos fallidos libres antes de empezar a bloquear
@@ -17,7 +18,27 @@ export function clientIp(request: Request): string {
 
 /** null si puede intentar; si no, los segundos que faltan para poder reintentar. */
 export async function secondsUntilUnlocked(ip: string): Promise<number | null> {
-  const record = await prisma.loginAttempt.findUnique({ where: { ip } });
+  let record;
+  try {
+    record = await prisma.loginAttempt.findUnique({ where: { ip } });
+  } catch (error) {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2021") {
+      throw error;
+    }
+
+    // Las instalaciones anteriores no tenían esta tabla. Crear únicamente
+    // la tabla que protege el login, sin sincronizar el resto de la cartera.
+    await prisma.$executeRaw`
+      CREATE TABLE IF NOT EXISTS "LoginAttempt" (
+        "ip" TEXT NOT NULL,
+        "failedCount" INTEGER NOT NULL DEFAULT 0,
+        "lockedUntil" TIMESTAMP(3),
+        "updatedAt" TIMESTAMP(3) NOT NULL,
+        CONSTRAINT "LoginAttempt_pkey" PRIMARY KEY ("ip")
+      )
+    `;
+    record = await prisma.loginAttempt.findUnique({ where: { ip } });
+  }
   if (!record?.lockedUntil) return null;
   const remainingMs = record.lockedUntil.getTime() - Date.now();
   return remainingMs > 0 ? Math.ceil(remainingMs / 1000) : null;
