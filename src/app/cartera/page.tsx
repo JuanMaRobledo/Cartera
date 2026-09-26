@@ -31,6 +31,7 @@ interface PositionDto {
   costBasisCop: number | null;
   avgPurchaseTrm: number | null;
   currentPriceLocal: number | null;
+  priceAsOf: string | null;
   marketValueLocal: number | null;
   marketValueBase: number | null;
   marketValueCop: number | null;
@@ -285,7 +286,7 @@ export default function DashboardPage() {
       },
       {
         key: "precioActual",
-        label: "Precio actual",
+        label: "Último precio",
         defaultVisible: true,
         sortValue: (p) => shownAmount(p.currentPriceLocal, p),
         render: (p) => {
@@ -294,6 +295,13 @@ export default function DashboardPage() {
             : convertLocalAmount(p.currentPriceLocal, p.currencyCode, consolidatedCurrency, currentTrmForColumns);
           return value != null ? formatMoney(value, showPurchaseCurrency ? p.currencyCode : consolidatedCurrency) : "—";
         },
+      },
+      {
+        key: "fechaPrecio",
+        label: "Fecha precio",
+        defaultVisible: true,
+        sortValue: (p) => p.priceAsOf,
+        render: (p) => p.priceAsOf?.slice(0, 10) ?? "Sin fecha",
       },
       {
         key: "valorMercado",
@@ -665,6 +673,7 @@ export default function DashboardPage() {
       "Moneda",
       "Cantidad",
       "Precio actual",
+      "Fecha precio",
       `Valor mercado (${showPurchaseCurrency ? "moneda de compra" : selectedCurrency})`,
       `Retorno (${showPurchaseCurrency ? "moneda de compra" : selectedCurrency})`,
       `Retorno % (${showPurchaseCurrency ? "sin efecto cambiario" : "con efecto cambiario"})`,
@@ -682,6 +691,7 @@ export default function DashboardPage() {
       p.currencyCode,
       p.quantity,
       p.currentPriceLocal ?? "",
+      p.priceAsOf?.slice(0, 10) ?? "",
       (showPurchaseCurrency
         ? p.marketValueLocal
         : convertLocalAmount(p.marketValueLocal, p.currencyCode, selectedCurrency, data.currentTrmToCop)) ?? "",

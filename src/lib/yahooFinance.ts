@@ -22,6 +22,7 @@ export interface YahooQuoteResult {
   assetId: string;
   symbol: string;
   price: number | null;
+  priceDate: string | null;
   currency: string | null;
   error: string | null;
 }
@@ -34,18 +35,23 @@ async function fetchOne(assetId: string, symbol: string): Promise<YahooQuoteResu
       headers: { "User-Agent": "Mozilla/5.0" },
       signal: controller.signal,
     });
-    if (!res.ok) return { assetId, symbol, price: null, currency: null, error: `HTTP ${res.status}` };
+    if (!res.ok) return { assetId, symbol, price: null, priceDate: null, currency: null, error: `HTTP ${res.status}` };
     const data = await res.json();
     const result = data?.chart?.result?.[0];
     const err = data?.chart?.error;
-    if (err) return { assetId, symbol, price: null, currency: null, error: err.description ?? "sin datos" };
+    if (err) return { assetId, symbol, price: null, priceDate: null, currency: null, error: err.description ?? "sin datos" };
     const price = result?.meta?.regularMarketPrice;
     const currency = result?.meta?.currency ?? null;
-    if (typeof price !== "number") return { assetId, symbol, price: null, currency, error: "sin precio" };
-    return { assetId, symbol, price, currency, error: null };
+    const marketTime = result?.meta?.regularMarketTime;
+    if (typeof price !== "number" || !Number.isFinite(price) || price <= 0)
+      return { assetId, symbol, price: null, priceDate: null, currency, error: "sin precio válido" };
+    if (typeof marketTime !== "number" || !Number.isFinite(marketTime))
+      return { assetId, symbol, price: null, priceDate: null, currency, error: "sin fecha de cotización" };
+    const priceDate = new Date(marketTime * 1000).toISOString().slice(0, 10);
+    return { assetId, symbol, price, priceDate, currency, error: null };
   } catch (e) {
     const message = e instanceof Error && e.name === "AbortError" ? "tiempo de espera agotado" : "error de red";
-    return { assetId, symbol, price: null, currency: null, error: message };
+    return { assetId, symbol, price: null, priceDate: null, currency: null, error: message };
   } finally {
     clearTimeout(timeout);
   }
