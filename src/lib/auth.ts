@@ -44,3 +44,20 @@ export function isValidSession(token: string | undefined | null): boolean {
   if (a.length !== b.length) return false;
   return timingSafeEqual(a, b);
 }
+
+/** Longitud mínima de EXPORT_TOKEN: un token corto no se acepta aunque esté configurado. */
+export const MIN_EXPORT_TOKEN_LENGTH = 32;
+
+/**
+ * Acceso de solo lectura a /api/export sin sesión, para scripts (p. ej. la
+ * valoración de JMR): "Authorization: Bearer $EXPORT_TOKEN". Sin EXPORT_TOKEN
+ * configurada (o con una de menos de 32 caracteres) el acceso por token queda
+ * deshabilitado y solo sirve la sesión normal.
+ */
+export function isValidExportToken(authorization: string | null | undefined): boolean {
+  const token = process.env.EXPORT_TOKEN?.trim();
+  if (!token || token.length < MIN_EXPORT_TOKEN_LENGTH) return false;
+  const match = authorization?.match(/^Bearer\s+(.+)$/i);
+  if (!match) return false;
+  return safeEqualText(match[1].trim(), token);
+}

@@ -112,7 +112,8 @@ movimiento del tipo de cambio.
   precargado con los valores existentes (comisión incluida) y guarda los
   cambios con `PATCH /api/transactions/:id`.
 - **Usuario y contraseña de acceso**: toda la app (páginas y API, salvo
-  `/api/cron/*` que usa su propio `CRON_SECRET`) queda detrás de las
+  `/api/cron/*` que usa su propio `CRON_SECRET` y `/api/export`, que además
+  de la sesión acepta `EXPORT_TOKEN`) queda detrás de las
   credenciales definidas en `APP_USERNAME` y `APP_PASSWORD`. Si no se define
   `APP_USERNAME`, se usa `juan0804`. Sin `APP_PASSWORD`
   configurada la app queda abierta solo en desarrollo local; en producción
@@ -120,6 +121,17 @@ movimiento del tipo de cambio.
   `src/proxy.ts` (Proxy/Middleware de Next.js) y la sesión es una cookie
   `HttpOnly` con el hash de la contraseña, nunca la contraseña en texto
   plano.
+- **Exportar toda la cartera**: el botón "Exportar cartera" del panel
+  descarga un JSON completo (cuentas, activos, posiciones abiertas y
+  cerradas, posiciones por cuenta con costo promedio y fecha de la primera
+  compra de la posición vigente, efectivo, resumen, tipos de cambio y todas
+  las transacciones) y CSV de posiciones y de transacciones. La ruta es
+  `GET /api/export` (`?format=csv&table=positions|transactions`,
+  `&download=1` para descargar). Es de solo lectura y acepta la sesión
+  normal o `Authorization: Bearer $EXPORT_TOKEN`, para que un script (por
+  ejemplo la valoración de JMR) lea las posiciones sin usuario ni
+  contraseña. Sin `EXPORT_TOKEN` (o con menos de 32 caracteres) el acceso
+  por token queda deshabilitado.
 - **Acceso único a las tres aplicaciones**: desde esta portada se emite un
   código de 45 segundos, de un solo uso, para Modelo JMR o Presupuesto. La
   aplicación de destino lo verifica en `/api/sso/verify` y crea su propia
@@ -188,6 +200,8 @@ fijo:
      será `JuanMaRobledo`).
    - `APP_PASSWORD` con la contraseña que vas a usar para entrar a la app.
      En producción es obligatoria: si falta, el servidor responde 503.
+   - `EXPORT_TOKEN` (opcional) con un token largo (`openssl rand -hex 32`)
+     si querés leer la cartera desde scripts con `GET /api/export`.
 4. Hacé clic en **Deploy**. Vercel instala las dependencias, crea las
    tablas en la base (`prisma db push`, corre solo como parte del build) y
    compila la app. Al terminar te da una URL fija

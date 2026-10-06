@@ -4,6 +4,8 @@ import {
   DEFAULT_APP_USERNAME,
   expectedSessionToken,
   expectedUsername,
+  isValidExportToken,
+  MIN_EXPORT_TOKEN_LENGTH,
 } from "./auth";
 
 const originalUsername = process.env.APP_USERNAME;
@@ -39,5 +41,30 @@ describe("autenticación", () => {
 
     process.env.APP_USERNAME = "otro";
     expect(expectedSessionToken()).not.toBe(firstToken);
+  });
+});
+
+describe("token de exportación", () => {
+  const originalToken = process.env.EXPORT_TOKEN;
+  afterEach(() => {
+    if (originalToken === undefined) delete process.env.EXPORT_TOKEN;
+    else process.env.EXPORT_TOKEN = originalToken;
+  });
+
+  it("queda deshabilitado sin EXPORT_TOKEN o con uno corto", () => {
+    delete process.env.EXPORT_TOKEN;
+    expect(isValidExportToken("Bearer cualquiera")).toBe(false);
+    process.env.EXPORT_TOKEN = "corto";
+    expect(isValidExportToken("Bearer corto")).toBe(false);
+  });
+
+  it("acepta solo el Bearer exacto", () => {
+    const token = "a".repeat(MIN_EXPORT_TOKEN_LENGTH);
+    process.env.EXPORT_TOKEN = token;
+    expect(isValidExportToken(`Bearer ${token}`)).toBe(true);
+    expect(isValidExportToken(`bearer ${token}`)).toBe(true);
+    expect(isValidExportToken(token)).toBe(false);
+    expect(isValidExportToken(`Bearer ${token}b`)).toBe(false);
+    expect(isValidExportToken(null)).toBe(false);
   });
 });
