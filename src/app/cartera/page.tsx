@@ -139,6 +139,7 @@ export default function DashboardPage() {
   const [moneyView, setMoneyView] = useState<MoneyView>("USD");
   const [netWorthHistory, setNetWorthHistory] = useState<NetWorthPoint[]>([]);
   const [pdfDownloading, setPdfDownloading] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const load = (scopeAccountIds: string[]) => {
     const query = scopeAccountIds.length > 0
@@ -728,6 +729,28 @@ export default function DashboardPage() {
     }
   };
 
+  const downloadFullExport = async (query: string, label: string) => {
+    setExporting(true);
+    try {
+      const res = await fetch(`/api/export?${query}&download=1`);
+      if (!res.ok) {
+        setRefreshMsg(`No se pudo exportar ${label}.`);
+        return;
+      }
+      const name =
+        res.headers.get("content-disposition")?.match(/filename="([^"]+)"/)?.[1] ??
+        `cartera-${new Date().toISOString().slice(0, 10)}`;
+      const blobUrl = URL.createObjectURL(await res.blob());
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = name;
+      link.click();
+      URL.revokeObjectURL(blobUrl);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const allocationByType = Object.entries(
     selectedPositions.reduce<Record<string, number>>((acc, p) => {
       const label = ASSET_TYPE_LABELS[p.assetType as keyof typeof ASSET_TYPE_LABELS] ?? p.assetType;
@@ -809,10 +832,41 @@ export default function DashboardPage() {
         </div>
         <div className="text-right">
           <div className="flex flex-wrap justify-end gap-2">
-            <button className="btn-secondary" onClick={exportCsv} disabled={selectedPositions.length === 0}>Exportar CSV</button>
+            <button className="btn-secondary" onClick={exportCsv} disabled={selectedPositions.length === 0}>Exportar vista (CSV)</button>
             <button className="btn-secondary" onClick={downloadPdf} disabled={pdfDownloading}>
               {pdfDownloading ? "Generando PDF…" : "Descargar PDF"}
             </button>
+            <details className="relative">
+              <summary className="btn-secondary cursor-pointer list-none">
+                {exporting ? "Exportando…" : "Exportar cartera"}
+              </summary>
+              <div className="absolute right-0 z-20 mt-1 w-64 space-y-1 rounded-xl border border-[#ded8ca] bg-white p-2 text-left shadow-lg">
+                <p className="px-2 pb-1 text-xs text-slate-500">
+                  Toda la cartera, todas las cuentas, sin filtros.
+                </p>
+                <button
+                  className="block w-full rounded-lg px-2 py-1.5 text-left text-sm hover:bg-[#f4f0e6]"
+                  disabled={exporting}
+                  onClick={() => downloadFullExport("format=json", "la cartera completa")}
+                >
+                  Cartera completa (JSON)
+                </button>
+                <button
+                  className="block w-full rounded-lg px-2 py-1.5 text-left text-sm hover:bg-[#f4f0e6]"
+                  disabled={exporting}
+                  onClick={() => downloadFullExport("format=csv&table=positions", "las posiciones")}
+                >
+                  Posiciones por cuenta (CSV)
+                </button>
+                <button
+                  className="block w-full rounded-lg px-2 py-1.5 text-left text-sm hover:bg-[#f4f0e6]"
+                  disabled={exporting}
+                  onClick={() => downloadFullExport("format=csv&table=transactions", "las transacciones")}
+                >
+                  Todas las transacciones (CSV)
+                </button>
+              </div>
+            </details>
             <button className="btn-secondary" onClick={refreshPrices} disabled={refreshing}>
               {refreshing ? "Actualizando…" : "Actualizar precios"}
             </button>
