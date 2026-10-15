@@ -1,5 +1,31 @@
-import { describe, expect, it } from "vitest";
-import { toYahooSymbol } from "./yahooFinance";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { fetchYahooQuotes, toYahooSymbol } from "./yahooFinance";
+
+afterEach(() => vi.unstubAllGlobals());
+
+describe("fecha de la cotización", () => {
+  const assets = [{ id: "1", ticker: "AAPL", exchange: "NASDAQ", assetType: "STOCK" }];
+  const reply = (meta: Record<string, unknown>) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true, json: async () => ({ chart: { result: [{ meta }] } }),
+    }));
+  };
+
+  it("conserva el día del proveedor aunque la consulta sea posterior", async () => {
+    reply({ regularMarketPrice: 100, regularMarketTime: Date.parse("2026-10-09T20:00:00Z") / 1000, currency: "USD" });
+    expect((await fetchYahooQuotes(assets))[0]).toMatchObject({ price: 100, priceDate: "2026-10-09", error: null });
+  });
+
+  it("rechaza un precio sin timestamp en lugar de fecharlo hoy", async () => {
+    reply({ regularMarketPrice: 100, currency: "USD" });
+    expect((await fetchYahooQuotes(assets))[0]).toMatchObject({ price: null, priceDate: null, error: "sin fecha de cotización" });
+  });
+
+  it.each([0, -1, NaN, Infinity])("rechaza precio inválido %s", async price => {
+    reply({ regularMarketPrice: price, regularMarketTime: 1791576000 });
+    expect((await fetchYahooQuotes(assets))[0].price).toBeNull();
+  });
+});
 
 describe("toYahooSymbol", () => {
   it("usa el ticker tal cual para acciones/ETFs de EE.UU.", () => {
