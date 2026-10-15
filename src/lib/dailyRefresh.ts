@@ -18,22 +18,20 @@ export async function refreshPrices(): Promise<PriceRefreshResult> {
   if (assets.length === 0) return { updated: [], failed: [] };
 
   const quotes = await fetchYahooQuotes(assets);
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
-
   const updated: PriceRefreshResult["updated"] = [];
   const failed: PriceRefreshResult["failed"] = [];
 
   for (const quote of quotes) {
     const asset = assets.find((a) => a.id === quote.assetId)!;
-    if (quote.price == null) {
+    if (quote.price == null || quote.priceDate == null) {
       failed.push({ assetId: asset.id, ticker: asset.ticker, symbol: quote.symbol, error: quote.error ?? "sin datos" });
       continue;
     }
+    const quoteDate = new Date(`${quote.priceDate}T00:00:00.000Z`);
     await prisma.priceSnapshot.upsert({
-      where: { assetId_date: { assetId: asset.id, date: today } },
+      where: { assetId_date: { assetId: asset.id, date: quoteDate } },
       update: { price: quote.price, source: "YAHOO" },
-      create: { assetId: asset.id, date: today, price: quote.price, source: "YAHOO" },
+      create: { assetId: asset.id, date: quoteDate, price: quote.price, source: "YAHOO" },
     });
     updated.push({ assetId: asset.id, ticker: asset.ticker, price: quote.price });
   }
