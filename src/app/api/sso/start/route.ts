@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { issueTicket, safeReturnPath, SSO_TARGETS, type SsoApp } from "@/lib/sso";
+import { issueTicket, safeReturnPath, SSO_TARGETS, resolveSsoTarget, type SsoApp } from "@/lib/sso";
 
 export async function GET(request: NextRequest) {
   const app = request.nextUrl.searchParams.get("app");
   if (!app || !(app in SSO_TARGETS)) return new Response("Aplicación desconocida", { status: 400 });
-  const target = SSO_TARGETS[app as SsoApp];
+  const target = resolveSsoTarget(app as SsoApp, request.nextUrl.searchParams.get("target"));
+  if (!target) return new Response("Destino de SSO no autorizado", { status: 400 });
   const path = safeReturnPath(request.nextUrl.searchParams.get("path"));
   try {
     const code = await issueTicket(app as SsoApp, path);

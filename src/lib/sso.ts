@@ -8,6 +8,18 @@ export const SSO_TARGETS = {
 
 export type SsoApp = keyof typeof SSO_TARGETS;
 
+// El destino de prueba se limita al alias estable del PR #151 (propiedad del mismo equipo Vercel).
+// Nunca aceptar destinos arbitrarios, subdominios por coincidencia parcial ni URLs aportadas por terceros.
+const MODELO_PREVIEW_TARGETS = new Set([
+  "https://modelo-jmr-git-fix-sync-sheet-ta-0c6a24-juanmarobledos-projects.vercel.app",
+]);
+
+export function resolveSsoTarget(app: SsoApp, candidate: string | null): string | null {
+  if (candidate === null || candidate === "") return SSO_TARGETS[app];
+  return app === "modelo" && MODELO_PREVIEW_TARGETS.has(candidate) ? candidate : null;
+}
+
+
 export function safeReturnPath(value: string | null): string {
   if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\") || /[\r\n]/.test(value) || value.length > 1024) return "/";
   return value;

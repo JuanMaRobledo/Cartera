@@ -15,7 +15,7 @@ vi.mock("@/lib/prisma", () => ({
   } },
 }));
 
-import { consumeTicket, issueTicket, safeReturnPath } from "./sso";
+import { consumeTicket, issueTicket, safeReturnPath, resolveSsoTarget } from "./sso";
 
 const originalPassword = process.env.APP_PASSWORD;
 afterEach(() => {
@@ -30,6 +30,17 @@ describe("transferencia del ingreso", () => {
     const code = await issueTicket("modelo", "/visor.html?id=1");
     expect(await consumeTicket(code)).toEqual({ app: "modelo", path: "/visor.html?id=1" });
     expect(await consumeTicket(code)).toBeNull();
+  });
+
+  it("preserva producción de forma predeterminada y solo permite el Preview fijado", () => {
+    const preview = "https://modelo-jmr-git-fix-sync-sheet-ta-0c6a24-juanmarobledos-projects.vercel.app";
+    expect(resolveSsoTarget("modelo", null)).toBe("https://modelo-jmr.vercel.app");
+    expect(resolveSsoTarget("modelo", preview)).toBe(preview);
+    expect(resolveSsoTarget("presupuesto", preview)).toBeNull();
+    expect(resolveSsoTarget("modelo", preview + ".evil.test")).toBeNull();
+    expect(resolveSsoTarget("modelo", "https://evil.test")).toBeNull();
+    expect(resolveSsoTarget("modelo", preview + "/expediente.html")).toBeNull();
+    expect(resolveSsoTarget("modelo", "http://modelo-jmr-git-fix-sync-sheet-ta-0c6a24-juanmarobledos-projects.vercel.app")).toBeNull();
   });
 
   it("rechaza códigos vencidos y rutas que salgan del dominio", async () => {
