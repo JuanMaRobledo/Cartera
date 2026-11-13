@@ -1,9 +1,9 @@
 import Image from "next/image";
 import { InstallAppCard } from "@/components/InstallAppCard";
 
-// Accesos independientes desde el Centro Financiero. Mientras V2 y la Bitácora
-// migran a despliegues separados, se abren mediante el SSO existente de Floyd
-// con rutas de retorno explícitas y validadas.
+// Accesos independientes desde el Centro Financiero. V2 y JMR múltiplos tienen
+// proyecto propio (app=v2, app=multiplos); la Bitácora aún se abre mediante el SSO
+// de Floyd con rutas de retorno explícitas y validadas.
 const apps = [
   {
     name: "Cartera",
@@ -17,9 +17,18 @@ const apps = [
   {
     name: "Modelo JMR V2.0",
     description: "Modelo principal de valoración Damodaran: escenarios, estados financieros y análisis fundamental editable.",
-    href: "/api/sso/start?app=modelo&path=%2Fjmr-v2.html",
+    href: "/api/sso/start?app=v2",
     action: "Abrir Modelo JMR V2.0",
     category: "Valoración principal",
+    logo: "/app-logos/modelo-jmr.svg",
+    external: false,
+  },
+  {
+    name: "JMR múltiplos",
+    description: "Complemento de V2: valoración relativa por múltiplos, sin DCF. Se elabora solo cuando lo solicitas.",
+    href: "/api/sso/start?app=multiplos",
+    action: "Abrir JMR múltiplos",
+    category: "Valoración complementaria",
     logo: "/app-logos/modelo-jmr.svg",
     external: false,
   },
