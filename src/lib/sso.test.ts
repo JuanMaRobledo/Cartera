@@ -43,6 +43,16 @@ describe("transferencia del ingreso", () => {
     expect(resolveSsoTarget("modelo", "http://modelo-jmr-git-fix-sync-sheet-ta-0c6a24-juanmarobledos-projects.vercel.app")).toBeNull();
   });
 
+  it("abre Floyd, V2 y la Bitácora con el mismo SSO sin permitir destinos externos", async () => {
+    process.env.APP_PASSWORD = "local-test-secret";
+    for (const path of ["/", "/jmr-v2.html", "/bitacora-terceros.html"]) {
+      expect(safeReturnPath(path)).toBe(path);
+      const code = await issueTicket("modelo", path);
+      expect(await consumeTicket(code)).toEqual({ app: "modelo", path });
+    }
+    expect(safeReturnPath("//example.com/jmr-v2.html")).toBe("/");
+  });
+
   it("rechaza códigos vencidos y rutas que salgan del dominio", async () => {
     process.env.APP_PASSWORD = "local-test-secret";
     const code = await issueTicket("presupuesto", "/app.html");
