@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma";
 
 export const SSO_TARGETS = {
   modelo: "https://modelo-jmr.vercel.app",
+  // Aplicaciones propias en proyectos Vercel separados (13-nov-2026). Destinos exactos; nunca aceptar otros.
+  v2: "https://modelo-jmr-v2.vercel.app",
+  multiplos: "https://jmr-multiplos.vercel.app",
   presupuesto: "https://presupuesto-app-web.vercel.app",
 } as const;
 

@@ -63,3 +63,20 @@ describe("transferencia del ingreso", () => {
     expect(safeReturnPath("/app.html?x=1")).toBe("/app.html?x=1");
   });
 });
+
+describe("aplicaciones propias (V2 y JMR múltiplos)", () => {
+  it("usa destinos exactos y no acepta previews ni destinos ajenos para ellas", () => {
+    expect(resolveSsoTarget("v2", null)).toBe("https://modelo-jmr-v2.vercel.app");
+    expect(resolveSsoTarget("multiplos", null)).toBe("https://jmr-multiplos.vercel.app");
+    expect(resolveSsoTarget("v2", "https://evil.test")).toBeNull();
+    expect(resolveSsoTarget("multiplos", "https://modelo-jmr-v2.vercel.app")).toBeNull();
+    expect(resolveSsoTarget("v2", "https://modelo-jmr-git-fix-sync-sheet-ta-0c6a24-juanmarobledos-projects.vercel.app")).toBeNull();
+  });
+
+  it("el ticket queda atado a su aplicación", async () => {
+    process.env.APP_PASSWORD = "local-test-secret";
+    const code = await issueTicket("multiplos", "/index.html");
+    expect(await consumeTicket(code)).toEqual({ app: "multiplos", path: "/index.html" });
+  });
+});
+
