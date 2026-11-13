@@ -1,11 +1,13 @@
 import Image from "next/image";
 import { InstallAppCard } from "@/components/InstallAppCard";
 
+// Accesos independientes desde el Centro Financiero. Mientras V2 y la Bitácora
+// migran a despliegues separados, se abren mediante el SSO existente de Floyd
+// con rutas de retorno explícitas y validadas.
 const apps = [
   {
     name: "Cartera",
-    description:
-      "Posiciones, rentabilidad, efectivo, deuda y efecto cambiario en una sola vista.",
+    description: "Posiciones, rentabilidad, efectivo, deuda y efecto cambiario en una sola vista.",
     href: "/cartera",
     action: "Abrir cartera",
     category: "Inversiones",
@@ -13,19 +15,35 @@ const apps = [
     external: false,
   },
   {
-    name: "Modelo JMR",
-    description:
-      "Valoración empresarial, research fundamental y seguimiento disciplinado de tesis.",
+    name: "Modelo JMR Floyd",
+    description: "Modelo original: valoraciones exhaustivas, expedientes y análisis fundamentales.",
     href: "/api/sso/start?app=modelo",
-    action: "Abrir modelo",
-    category: "Análisis",
+    action: "Abrir Floyd",
+    category: "Valoración",
+    logo: "/app-logos/modelo-jmr.svg",
+    external: false,
+  },
+  {
+    name: "Modelo JMR V2.0",
+    description: "Modelo simplificado basado en Damodaran, con valoraciones pendientes y auditadas por ti.",
+    href: "/api/sso/start?app=modelo&path=%2Fjmr-v2.html",
+    action: "Abrir JMR V2.0",
+    category: "Valoración",
+    logo: "/app-logos/modelo-jmr.svg",
+    external: false,
+  },
+  {
+    name: "Bitácora de terceros",
+    description: "Valoraciones y análisis de fuentes externas, separados de tus modelos propios.",
+    href: "/api/sso/start?app=modelo&path=%2Fbitacora-terceros.html",
+    action: "Abrir bitácora",
+    category: "Referencias externas",
     logo: "/app-logos/modelo-jmr.svg",
     external: false,
   },
   {
     name: "Presupuesto",
-    description:
-      "Cuentas, tarjetas, deudas, flujo de caja y patrimonio personal bajo control.",
+    description: "Cuentas, tarjetas, deudas, flujo de caja y patrimonio personal bajo control.",
     href: "/api/sso/start?app=presupuesto",
     action: "Abrir presupuesto",
     category: "Finanzas personales",
@@ -92,7 +110,7 @@ export default function AppsHomePage() {
             Comprender · Valorar · Decidir
           </p>
           <p className="mt-4 max-w-xl text-sm leading-6 text-[#697069] sm:text-base">
-            Tres herramientas conectadas por una misma manera de pensar el
+            Herramientas independientes, conectadas por una misma manera de pensar el
             patrimonio.
           </p>
         </div>
@@ -112,7 +130,7 @@ export default function AppsHomePage() {
             </span>
           </div>
 
-          <div className="grid gap-5 md:grid-cols-3">
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {apps.map((app) => {
               const card = (
                 <>
