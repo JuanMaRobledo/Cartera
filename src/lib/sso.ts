@@ -12,6 +12,7 @@ export type SsoApp = keyof typeof SSO_TARGETS;
 // Nunca aceptar destinos arbitrarios, subdominios por coincidencia parcial ni URLs aportadas por terceros.
 const MODELO_PREVIEW_TARGETS = new Set([
   "https://modelo-jmr-git-fix-sync-sheet-ta-0c6a24-juanmarobledos-projects.vercel.app",
+  "https://modelo-jmr-git-feat-jmr-v2-previ-fbf730-juanmarobledos-projects.vercel.app",
 ]);
 
 export function resolveSsoTarget(app: SsoApp, candidate: string | null): string | null {
