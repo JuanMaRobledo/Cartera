@@ -5,6 +5,23 @@ Las aplicaciones permanecen en repositorios separados porque usan tecnologías,
 datos y despliegues distintos; así se evita una migración riesgosa sin volver a
 dispersar la experiencia del usuario.
 
+## Navegación acordada (13 de noviembre de 2026)
+
+El Centro Financiero tiene accesos directos a **Cartera**, **Modelo JMR Floyd**,
+**Modelo JMR V2.0** y **Bitácora de terceros**. Se conserva **Presupuesto**
+como quinta herramienta existente.
+
+- Floyd conserva su expediente y motor históricos.
+- V2 abre su propia página y cataloga dos visores: **Pendientes de mi auditoría**
+  y **Auditadas y aprobadas por mí**. Solo una aprobación explícita del propietario
+  mueve una empresa al segundo visor; las pruebas técnicas nunca la aprueban automáticamente.
+- Bitácora de terceros abre directamente su página, sin mezclarse con el catálogo V2.
+- **Fase actual**: separación de navegación a través del SSO existente de Modelo JMR.
+  **No son todavía repositorios ni proyectos Vercel independientes**. La migración
+  de V2 y Bitácora necesita proyectos y flujos de autenticación propios.
+- Los cambios a Cartera y Modelo JMR se proponen mediante PRs y no deben publicarse
+  hasta pasar pruebas y verificar el acceso autenticado en los previews.
+
 ## Repositorios principales
 
 | Producto | Repositorio canónico | Despliegue |
