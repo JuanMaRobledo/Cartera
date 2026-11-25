@@ -73,6 +73,12 @@ describe("aplicaciones propias (V2 y JMR múltiplos)", () => {
     expect(resolveSsoTarget("v2", "https://modelo-jmr-git-fix-sync-sheet-ta-0c6a24-juanmarobledos-projects.vercel.app")).toBeNull();
   });
 
+  it("el ticket de V2 conserva la ruta de la ventana de acciones Colombia", async () => {
+    process.env.APP_PASSWORD = "local-test-secret";
+    const code = await issueTicket("v2", "/jmr-v2-colombia.html");
+    expect(await consumeTicket(code)).toEqual({ app: "v2", path: "/jmr-v2-colombia.html" });
+  });
+
   it("el ticket queda atado a su aplicación", async () => {
     process.env.APP_PASSWORD = "local-test-secret";
     const code = await issueTicket("multiplos", "/index.html");

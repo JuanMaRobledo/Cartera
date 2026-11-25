@@ -11,6 +11,11 @@ El Centro Financiero tiene accesos directos a **Cartera**, **Modelo JMR Floyd**,
 **Modelo JMR V2.0** y **Bitácora de terceros**. Se conserva **Presupuesto**
 como quinta herramienta existente.
 
+**Actualización (25-nov-2026):** se añade el acceso **Acciones Colombia**, que abre
+la ventana `/jmr-v2-colombia.html` de V2 con la misma sesión SSO, y se retira del
+Centro Financiero la tarjeta **Modelo JMR Floyd**. Floyd sigue desplegado como proyecto
+propio y la Bitácora de terceros conserva su acceso; solo se quita el atajo.
+
 - Floyd conserva su expediente y motor históricos.
 - V2 abre su propia página y cataloga dos visores: **Pendientes de mi auditoría**
   y **Auditadas y aprobadas por mí**. Solo una aprobación explícita del propietario

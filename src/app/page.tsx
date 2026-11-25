@@ -2,7 +2,8 @@ import Image from "next/image";
 import { InstallAppCard } from "@/components/InstallAppCard";
 
 // Accesos independientes desde el Centro Financiero. V2 y JMR múltiplos tienen
-// proyecto propio (app=v2, app=multiplos); la Bitácora aún se abre mediante el SSO
+// proyecto propio (app=v2, app=multiplos); «Acciones Colombia» abre una página de V2
+// con una ruta de retorno validada. La Bitácora aún se abre mediante el SSO
 // de Floyd con rutas de retorno explícitas y validadas.
 const apps = [
   {
@@ -24,20 +25,20 @@ const apps = [
     external: false,
   },
   {
+    name: "Acciones Colombia",
+    description: "Valoración nominal en pesos con el motor Damodaran de V2: escenarios, margen de seguridad y sensibilidad. En revisión, sin auditar.",
+    href: "/api/sso/start?app=v2&path=%2Fjmr-v2-colombia.html",
+    action: "Abrir acciones Colombia",
+    category: "Valoración Colombia",
+    logo: "/app-logos/modelo-jmr.svg",
+    external: false,
+  },
+  {
     name: "JMR múltiplos",
     description: "Complemento de V2: valoración relativa por múltiplos, sin DCF. Se elabora solo cuando lo solicitas.",
     href: "/api/sso/start?app=multiplos",
     action: "Abrir JMR múltiplos",
     category: "Valoración complementaria",
-    logo: "/app-logos/modelo-jmr.svg",
-    external: false,
-  },
-  {
-    name: "Modelo JMR Floyd",
-    description: "Modelo anterior: expedientes y valoraciones históricas, conservados sin cambios.",
-    href: "/api/sso/start?app=modelo",
-    action: "Abrir Floyd",
-    category: "Modelo anterior",
     logo: "/app-logos/modelo-jmr.svg",
     external: false,
   },
